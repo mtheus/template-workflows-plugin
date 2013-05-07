@@ -34,7 +34,7 @@
     	foo.updateAll(function(t) {
     		var res = t.responseObject();
     		if (res.result == true) {
-    			 window.location.href = '${rootURL}/${it.url}configure';
+      			document.getElementById('msg').innerHTML = t.responseObject().msg;
     		}
     	})
     }

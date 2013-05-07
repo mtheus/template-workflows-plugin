@@ -73,7 +73,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			return "This Project does not have any Associated Workflows";
 		}
 
-		return "This Project has " + this.templateInstances.getInstances().size() + " Assosiated Workflows";
+		return "This Project has " + this.templateInstances.getInstances().size() + " Associated Workflows";
 	}
 
 	public Set<String> getTemplateNames() {
@@ -216,18 +216,44 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 
 	@JavaScriptMethod
 	public JSONObject updateAll() {
+		StringBuilder sb = new StringBuilder();
 		JSONObject ret = new JSONObject();
-		try {
-			Collection<TemplateWorkflowInstance> instances = this.getTemplateInstances();
-			for (TemplateWorkflowInstance instance : instances) {
-				this.setTemplateInstanceName(instance.getInstanceName());
-				relatedJobs = this.getRelatedJobs(instance.getTemplateName());
+
+		Collection<TemplateWorkflowInstance> instances = this.getTemplateInstances();
+
+		List<String> updated = new ArrayList<String>();
+		List<String> notUpdated = new ArrayList<String>();
+
+		for (TemplateWorkflowInstance instance : instances) {
+			String iname = instance.getInstanceName();
+			this.setTemplateInstanceName(iname);
+			relatedJobs = this.getRelatedJobs(instance.getTemplateName());
+			try {
 				this.createOrUpdate("update", instance.getJobParameters(), instance.getRelatedJobs());
+				updated.add(iname);
+			} catch (IOException e) {
+				notUpdated.add(iname);
 			}
-			ret.put("result", true);
-		} catch (IOException e) {
-			ret.put("result", false);
 		}
+
+		if (!notUpdated.isEmpty()) {
+			sb.append(notUpdated.size() + " workflows have not been updated: <ul>");
+			for (String s : notUpdated) {
+				sb.append("<li>" + s + "</li>");
+			}
+			sb.append("</ul>");
+		}
+
+		if (!updated.isEmpty()) {
+			sb.append(updated.size() + " workflows have been updated: <ul>");
+			for (String s : updated) {
+				sb.append("<li>" + s + "</li>");
+			}
+			sb.append("</ul>");
+		}
+
+		ret.put("result", true);
+		ret.put("msg", sb.toString());
 		return ret;
 	}
 
