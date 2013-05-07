@@ -143,7 +143,8 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			}
 
 			for (String key : replacementsParams.keySet()) {
-				jobXml = jobXml.replaceAll("@@" + key + "@@", replacementsParams.get(key));
+				String replacement = replacementsParams.get(key).replace("&", "&amp;");
+				jobXml = jobXml.replaceAll("@@" + key + "@@", replacement);
 			}
 
 			Boolean wasCreated = this.createOrUpdateJob(job.getName(), replacementsJobs.get(job.getName()), jobXml, isNew);
