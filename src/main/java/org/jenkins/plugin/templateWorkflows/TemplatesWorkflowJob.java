@@ -468,13 +468,17 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		TemplateWorkflowInstance templateInstance = null;
 
 		try {
-			// if (isNew) {
-			relatedJobs = this.getRelatedJobs(templateName);
-			jobParameters = this.getTemplateParamaters(relatedJobs);
-			// } else {
-			if (!isNew) {
+			if (isNew) {
+				relatedJobs = this.getRelatedJobs(templateName);
+				jobParameters = this.getTemplateParamaters(relatedJobs);
+			} else {
+				// if (!isNew) {
 				templateInstance = this.templateInstances.get(this.templateInstanceName);
-				relatedJobs = this.getRelatedJobs(templateInstance.getTemplateName());
+				String tname = templateInstance.getTemplateName();
+				relatedJobs = this.getRelatedJobs(tname);
+				jobParameters = this.getTemplateParamaters(relatedJobs);
+
+				relatedJobs = this.getRelatedJobs(tname);
 				Map<String, String> previousParams = templateInstance.getJobParameters();
 				for (String p : jobParameters.keySet()) {
 					jobParameters.put(p, previousParams.get(p));
