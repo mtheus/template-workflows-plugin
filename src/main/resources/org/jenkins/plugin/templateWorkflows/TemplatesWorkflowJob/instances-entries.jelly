@@ -29,6 +29,16 @@
   </l:pane>
 
   <script>
+      function updateAll() {
+    	var foo = <st:bind value="${it}"/>
+    	foo.updateAll(function(t) {
+    		var res = t.responseObject();
+    		if (res.result == true) {
+    			 window.location.href = '${rootURL}/${it.url}configure';
+    		}
+    	})
+    }
+
     function setTemplateInstanceName(instanceName) {
     	var foo = <st:bind value="${it}"/>
     	foo.setTemplateInstanceName(instanceName, function(t) {

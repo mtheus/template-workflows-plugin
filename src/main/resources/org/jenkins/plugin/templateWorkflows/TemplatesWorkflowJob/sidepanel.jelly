@@ -8,6 +8,7 @@
       <l:isAdmin>
         <l:task icon="images/24x24/edit-delete.gif" href="${rootURL}/${it.url}delete" title="Delete Project" />
         <l:task icon="images/24x24/setting.gif"  onclick="setTemplateInstanceName('template.createNewTemplate'); return false;" href="${rootURL}/${it.url}configure" title="Create Workflow" />
+        <l:task icon="images/24x24/setting.gif"  onclick="updateAll(); return false;" href="${rootURL}/${it.url}configure" title="Update all workflows" />
       </l:isAdmin>
       <st:include page="actions.jelly" />
     </l:tasks>
