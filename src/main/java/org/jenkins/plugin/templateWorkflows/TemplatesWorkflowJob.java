@@ -65,7 +65,9 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			return new ArrayList<TemplateWorkflowInstance>();
 		}
 
-		return this.templateInstances.values();
+		ArrayList<TemplateWorkflowInstance> all = new ArrayList<TemplateWorkflowInstance>(this.templateInstances.values());
+		Collections.sort(all);
+		return all;
 	}
 
 	public String getProjectDesc() {

@@ -4,13 +4,14 @@
     <j:forEach var="instance" items="${it.templateInstances}">
       <j:set var="link" value="${rootURL}/${instance.name}/" />
       <tr class="build-row">
-        <td nowrap="nowrap">
+        <td nowrap="nowrap" tooltip="created from '${instance.templateName}'">
           <img width="16" height="16" src="${rootURL}/images/16x16/orange-square.png" />
           <a style="padding-left:5px;"
           onclick="setTemplateInstanceName('${instance.instanceName}'); return false;"
           href="${rootURL}/${it.url}configure">
             ${instance.instanceName}
           </a>
+          <span>(${instance.relatedJobsSize} jobs)</span>
         </td>
          <td style="width:20px">
          <input type="image" title="Delete workflow: '${instance.instanceName}' (jobs that were created by this workflow will be deleted)"
