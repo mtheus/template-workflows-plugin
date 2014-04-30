@@ -1,0 +1,119 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form"
+	xmlns:i="jelly:fmt">
+	<l:layout norefresh="true" title="${%Edit View}" permission="${it.CONFIGURE}">
+		<st:include page="sidepanel.jelly" />
+		<l:main-panel>
+			<!-- to make the form field binding work -->
+			<j:set var="instance" value="${it}" />
+			<j:set var="descriptor" value="${it.descriptor}" />
+
+			<h1>
+				<img width="48" height="48" src="${imagesURL}/48x48/setting.png"
+					alt="" style="margin-right:10px" />
+				${%Workflow Configurations}
+			</h1>
+
+			<f:form method="post" action="configSubmit" name="viewConfig">
+				<table width="100%" border="0" cellpadding="0" cellspacing="0"
+					style="margin-top: 0">
+					<f:block>
+
+						<j:if test="${!empty(it.getErrorMessages())}">
+							<j:forEach var="msg" items="${it.getErrorMessages()}">
+								<div class="error">${msg}</div>
+							</j:forEach>
+							<br />
+						</j:if>
+					</f:block>
+
+					<f:entry title="Template Name" field="templateName">
+						<!-- fixme: change later: onchange onchange="document.getElementsByName('viewConfig')[0].submit()" -->
+						<f:select onchange="document.getElementById('yui-gen1-button').click();" />
+					</f:entry>
+
+					<f:entry title="Workflow Name" field="templateInstanceName">
+						<f:textbox />
+						<j:if test="${!empty(it.getErrorMessages())}">
+							<j:forEach var="msg" items="${it.getErrorMessages()}">
+								<div class="error">${msg}</div>
+							</j:forEach>
+						</j:if>
+					</f:entry>
+
+					<f:entry field="templateInstanceName">
+						<f:checkbox />
+						${%Use template name as job prefix}
+					</f:entry>
+
+					<f:entry field="templateInstanceName">
+						<f:checkbox />
+						${%Allow the Use of Existing Jobs}
+					</f:entry>
+
+					<table width="100%" border="1" cellpadding="2" cellspacing="0"
+						class="pane bigtable" style="margin-top: 0">
+						<tr>
+							<td class="pane-header" width="30%">${%Template Job Name}</td>
+							<td class="pane-header">${%Job to copy}</td>
+						</tr>
+
+						<j:forEach var="instance" items="${it.templateInstances}">
+							<tr>
+								<td>
+									<span>${instance.instanceName}</span>
+								</td>
+								<td>
+									<f:textbox value="${instance.instanceName}" />
+									<j:if test="${!empty(it.getErrorMessages())}">
+										<j:forEach var="msg" items="${it.getErrorMessages()}">
+											<div class="error">${msg}</div>
+										</j:forEach>
+									</j:if>
+								</td>
+							</tr>
+						</j:forEach>
+
+					</table>
+
+					<br />
+
+					<table width="100%" border="1" cellpadding="2" cellspacing="0"
+						class="pane bigtable" style="margin-top: 0">
+						<tr>
+							<td class="pane-header" width="30%">${%Property Name}</td>
+							<td class="pane-header">${%Property Value}</td>
+						</tr>
+
+						<j:forEach var="instance" items="${it.templateInstances}">
+							<tr>
+								<td>
+									<span>${instance.instanceName}</span>
+								</td>
+								<td>
+									<f:textbox name="teste1" value="${instance.instanceName}" />
+								</td>
+							</tr>
+						</j:forEach>
+
+					</table>
+
+
+					<br />
+
+					<f:submit value="Save" />
+					<f:submit value="Delete" />
+
+
+				</table>
+
+				<!-- view property configurations -->
+				<f:descriptorList descriptors="${it.getApplicablePropertyDescriptors()}"
+					instances="${it.properties}" />
+
+
+			</f:form>
+		</l:main-panel>
+	</l:layout>
+</j:jelly>
