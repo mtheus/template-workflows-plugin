@@ -30,13 +30,20 @@
 
 					<f:entry title="Template Name" field="templateName">
 						<!-- fixme: change later: onchange onchange="document.getElementsByName('viewConfig')[0].submit()" -->
-						<f:select onchange="document.getElementById('yui-gen1-button').click();" />
+						<!-- <f:select onchange="document.getElementById('yui-gen1-button').click();"/> -->
+						<select class="setting-input" name="templateName">
+							<j:forEach var="opt" items="${it.getErrorMessages()}">
+								<f:option selected="${opt.name==instance.templateName}"
+									value="${opt.name}">${opt.name}</f:option>
+							</j:forEach>
+						</select>
 					</f:entry>
 
 					<f:entry title="Workflow Name" field="templateInstanceName">
 						<f:textbox />
-						<j:if test="${!empty(it.getErrorMessages())}">
-							<j:forEach var="msg" items="${it.getErrorMessages()}">
+						<j:if test="${!empty(it.getErrorMessages('templateInstanceName'))}">
+							<j:forEach var="msg"
+								items="${it.getErrorMessages('templateInstanceName')}">
 								<div class="error">${msg}</div>
 							</j:forEach>
 						</j:if>
@@ -66,8 +73,10 @@
 								</td>
 								<td>
 									<f:textbox value="${instance.instanceName}" />
-									<j:if test="${!empty(it.getErrorMessages())}">
-										<j:forEach var="msg" items="${it.getErrorMessages()}">
+									<j:if
+										test="${!empty(it.getErrorMessages('templateInstanceJob.'+instance.instanceName))}">
+										<j:forEach var="msg"
+											items="${it.getErrorMessages('templateInstanceJob'+instance.instanceName)}">
 											<div class="error">${msg}</div>
 										</j:forEach>
 									</j:if>

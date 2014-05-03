@@ -9,8 +9,7 @@ import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
-
-public class TemplateWorkflowProperty extends JobProperty<AbstractProject<?,?>> {
+public class TemplateWorkflowProperty extends JobProperty<AbstractProject<?, ?>> {
 
 	private String templateName;
 	private boolean isStartingWorkflowJob;
@@ -28,27 +27,26 @@ public class TemplateWorkflowProperty extends JobProperty<AbstractProject<?,?>> 
 	}
 
 	@DataBoundConstructor
-    public TemplateWorkflowProperty(String templateName, boolean isStartingWorkflowJob) {
-        this.templateName = templateName;
-        this.isStartingWorkflowJob = isStartingWorkflowJob;
-    }
+	public TemplateWorkflowProperty(String templateName, boolean isStartingWorkflowJob) {
+		this.templateName = templateName;
+		this.isStartingWorkflowJob = isStartingWorkflowJob;
+	}
 
 	public String getTemplateName() {
 		return templateName;
 	}
 
-    @Extension
-    public static class DescriptorImpl extends JobPropertyDescriptor {
-        @Override
-        public String getDisplayName() {
-            return "Template Workflow";
-        }
+	@Extension
+	public static class DescriptorImpl extends JobPropertyDescriptor {
+		@Override
+		public String getDisplayName() {
+			return "Template Workflow";
+		}
 
-        @Override
-        public TemplateWorkflowProperty newInstance(StaplerRequest req, JSONObject formData) throws FormException {
-            return formData.has("template-project")
-                    ? req.bindJSON(TemplateWorkflowProperty.class, formData.getJSONObject("template-project"))
-                    : null;
-        }
-    }
+		// TODO: its necessary? https://github.com/jenkinsci/dev-mode-plugin/blob/723b0a2441385e839fff02d1fde4b8faa405b708/src/main/java/org/jenkinsci/plugins/devmode/JobPropertyGenerator.java
+		@Override
+		public TemplateWorkflowProperty newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+			return formData.has("template-project") ? req.bindJSON(TemplateWorkflowProperty.class, formData.getJSONObject("template-project")) : null;
+		}
+	}
 }

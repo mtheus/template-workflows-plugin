@@ -16,7 +16,6 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
-
 @ExportedBean
 public class TemplateWorkflowInstances extends JobProperty<TemplatesWorkflowJob> {
 
@@ -57,17 +56,24 @@ public class TemplateWorkflowInstances extends JobProperty<TemplatesWorkflowJob>
 	}
 
 	@Extension
-    public static class DescriptorImpl extends JobPropertyDescriptor {
-        @Override
-        public String getDisplayName() {
-         return "TemplateInstances";
-        }
+	public static class DescriptorImpl extends JobPropertyDescriptor {
+		@Override
+		public String getDisplayName() {
+			return "TemplateInstances";
+		}
 
-        @Override
-        public TemplateWorkflowInstances newInstance(StaplerRequest req, JSONObject formData) throws FormException {
-            return formData.has("com.exlibris.template.TemplateInstances")
-            ? req.bindJSON(TemplateWorkflowInstances.class, formData.getJSONObject("com.exlibris.template.TemplateInstances"))
-            : null;
-        }
-    }
+		// TODO: its necessary? https://github.com/jenkinsci/dev-mode-plugin/blob/723b0a2441385e839fff02d1fde4b8faa405b708/src/main/java/org/jenkinsci/plugins/devmode/JobPropertyGenerator.java
+		@Override
+		public TemplateWorkflowInstances newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+			if(formData.has("com.exlibris.template.TemplateInstances")){
+				return req.bindJSON(TemplateWorkflowInstances.class, formData.getJSONObject("com.exlibris.template.TemplateInstances"));
+			}
+//			if(formData.has(TemplateWorkflowInstances.class.getName())){
+//				return req.bindJSON(TemplateWorkflowInstances.class, formData.getJSONObject(TemplateWorkflowInstances.class.getName()));
+//			}
+			return null;
+		}
+	}
 }
+
+
