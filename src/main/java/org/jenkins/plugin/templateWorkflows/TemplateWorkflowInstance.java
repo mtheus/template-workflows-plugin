@@ -16,6 +16,9 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 	private Map<String, String> jobParameters;
 	private Map<String, String> relatedJobs;
 
+	public TemplateWorkflowInstance() {
+	}
+	
 	public TemplateWorkflowInstance(final String templateName, final String instanceName, final Map<String, Boolean> isNewJobMap) {
 		this.templateName = templateName;
 		this.instanceName = instanceName;
@@ -54,11 +57,19 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 		return this.isNewJobMap.get(jobName);
 	}
 
-	public void setJobParameters(final Map<String, String> jobParameters) {
+	public void setInstanceName(String instanceName) {
+		this.instanceName = instanceName;
+	}
+
+	public void setTemplateName(String templateName) {
+		this.templateName = templateName;
+	}
+
+	public void setJobParameters(Map<String, String> jobParameters) {
 		this.jobParameters = jobParameters;
 	}
 
-	public void setRelatedJobs(final Map<String, String> relatedJobs) {
+	public void setRelatedJobs(Map<String, String> relatedJobs) {
 		this.relatedJobs = relatedJobs;
 	}
 

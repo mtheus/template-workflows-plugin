@@ -16,12 +16,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.ServletException;
 
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.bind.JavaScriptMethod;
@@ -29,6 +31,10 @@ import org.kohsuke.stapler.bind.JavaScriptMethod;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, TemplateswWorkflowRun> implements TopLevelItem {
+
+	private static final String ACTION_REFRESH = "Refresh";
+	private static final String ACTION_SAVE = "Save";
+	private static final String ACTION_DELETE = "Delete";
 
 	private TemplateWorkflowInstances templateInstances;
 	
@@ -39,6 +45,9 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	private Map<String, String> jobParameters;
 	private Map<String, String> jobRelation;
 	
+	private TemplateWorkflowInstance selectedInstance;
+	
+	@SuppressWarnings("rawtypes")
 	@Deprecated 
 	private static List<Job> relatedJobs;
 	@XStreamOmitField
@@ -56,18 +65,132 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	
 	@JavaScriptMethod
 	public JSONObject selectInstance(final String instanceName) {
-		this.templateInstanceName = instanceName;
+		
+		cleanFields();
+		
+		if(instanceName == null || templateInstances == null || templateInstances.getInstances() == null
+				|| !templateInstances.getInstances().containsKey(instanceName)){
+			this.selectedInstance = new TemplateWorkflowInstance();			
+		}
+		else {			
+			this.selectedInstance = templateInstances.getInstances().get(instanceName);
+			
+			this.templateInstanceName = selectedInstance.getInstanceName();
+			this.templateName = selectedInstance.getTemplateName();
+			//TODO: Fill the from with new fields
+		}
+		
 		return new JSONObject();
 	}
 
-//	public String getTemplateName() {
-//		return this.templateName;
-//	}
-//
-//	public String getTemplateInstanceName() {
-//		return this.templateInstanceName;
-//	}
 
+	
+	public synchronized void doConfigWorkflow(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException, FormException {
+
+		//TODO: There are some security issues? 
+		
+		getErrorMessages().clear();
+		
+		String postedAction = req.getParameter("action");
+		if(null == postedAction){
+			postedAction = ACTION_REFRESH;
+		}
+
+		JSONObject submittedForm = req.getSubmittedForm();
+		templateName = submittedForm.getString("templateName");
+		templateInstanceName = submittedForm.getString("templateInstanceName");
+		useTemplatePrefix = submittedForm.getBoolean("useTemplatePrefix");
+		useExistingJob = submittedForm.getBoolean("useExistingJob");
+		
+		if(ACTION_DELETE.equals(postedAction)){			
+			templateInstances.getInstances().remove(selectedInstance);			
+			finishAndRedirect(req, rsp);
+		}
+		else if(ACTION_REFRESH.equals(postedAction)){
+			
+			// Fill de maps
+			
+			forwardBack(req, rsp);
+		}
+		else if(ACTION_SAVE.equals(postedAction)){
+			
+			validateForm(submittedForm);
+			
+			if(!getErrorMessages().isEmpty()){
+				forwardBack(req, rsp);
+			}
+			else {
+				
+				if(selectedInstance.getInstanceName() == null){ // is new
+					selectedInstance.setInstanceName( templateInstanceName );
+				} else if( !selectedInstance.getInstanceName().equals(templateInstanceName)){ // renamed
+					// todo: check name conflict
+					addMessage(null, "Rename Workflow is not supported yet!");
+					forwardBack(req, rsp);
+					return;
+				}
+				
+				// TODO: copy values to selectedInstance.
+				
+				
+				templateInstances.getInstances().put(selectedInstance.getInstanceName(), selectedInstance); 				
+				finishAndRedirect(req, rsp);
+			}
+			
+		}
+
+	}
+
+	private void forwardBack(StaplerRequest req, StaplerResponse rsp) throws ServletException, IOException {
+		rsp.forwardToPreviousPage(req);
+	}
+
+	private void finishAndRedirect(StaplerRequest req, StaplerResponse rsp) throws IOException {
+		cleanFields();
+		this.save();
+		rsp.sendRedirect2(req.getContextPath() + "/job/" + getName());
+	}
+	
+	private void validateForm(JSONObject submittedForm){
+				 		
+		this.templateInstanceName = StringUtils.trimToEmpty(templateInstanceName);
+		if(StringUtils.isEmpty(templateInstanceName)){
+			addMessage("templateInstanceName", "Workflow Name is required");
+		}
+		
+	}
+	
+	private void cleanFields() {
+		getErrorMessages().clear();
+		this.templateInstanceName = null;
+		this.templateName = null;		
+		this.useTemplatePrefix = null;
+		this.useExistingJob = null ;	
+		this.jobParameters = null;
+		this.jobRelation = null;
+		
+	}
+
+	public String getTemplateName() {
+		return this.templateName;
+	}
+
+	public String getTemplateInstanceName() {
+		return this.templateInstanceName;
+	}
+
+	public Boolean getUseTemplatePrefix() {
+		return useTemplatePrefix;
+	}
+
+	public Boolean getUseExistingJob() {
+		return useExistingJob;
+	}
+
+	public Set<String> getAllWorkflowTemplateNames() {
+		return TemplateWorkflowUtil.getAllWorkflowTemplateNames();
+	}
+	
 	public Collection<TemplateWorkflowInstance> getTemplateInstances() {
 
 		ArrayList<TemplateWorkflowInstance> all = null;
@@ -93,27 +216,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	public Jenkins getParent() {
 		return Jenkins.getInstance();
 	}
-
-	@Override
-	public synchronized void doConfigSubmit(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException, FormException {
-
-		if( !req.getReferer().endsWith("/configureWorkflow") ){
-			super.doConfigSubmit(req, rsp);
-			return;
-		}
-		
-		getErrorMessages().clear();
-
-		JSONObject submittedForm = req.getSubmittedForm();
-		this.templateName = "teste2c";
-		// super.doConfigSubmit(req, rsp);
-		// submit(req, rsp);
-
-		addMessage(null, "teste");
-
-		rsp.forwardToPreviousPage(req);
-	}
-
 
 	public List<String> getErrorMessages() {
 		return getErrorMessages(null);
@@ -148,6 +250,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	@Extension
 	public static final class DescriptorImpl extends AbstractProjectDescriptor {
 
+		@SuppressWarnings("unused")
 		private TemplatesWorkflowJob templatesWorkflowJob;
 
 		// annotated classes must have a public no-argument constructor
@@ -185,12 +288,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			return m;
 		}
 */
-		// public ListBoxModel doFillTemplateJobsNameItems(@QueryParameter
-		// String templateName) {
-		// ListBoxModel m = new ListBoxModel();
-		// m.add("Teste1a", "teste1a");
-		// return m;
-		// }
 
 		// public FormValidation doCheckCount(@QueryParameter String value) {
 		// return FormValidation.validatePositiveInteger(value);
@@ -200,6 +297,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 
 	@Override
 	protected void reload() {
-		System.out.println("reload");
 	};
+	
 }

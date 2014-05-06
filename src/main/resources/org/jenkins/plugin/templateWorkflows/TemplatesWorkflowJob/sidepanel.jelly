@@ -13,7 +13,7 @@
 				<l:task icon="images/24x24/setting.gif" href="${rootURL}/${it.url}configure"
 					title="Configure" />
 				<l:task icon="images/24x24/gear.gif"
-					onclick="selectInstance(null); return false;"
+					onclick="selectInstance(null);"
 					href="${rootURL}/${it.url}configureWorkflow" title="Create Workflow" />
 				<!-- <l:task icon="images/24x24/setting.gif" onclick="updateAll(); return 
 					false;" href="${rootURL}/${it.url}configure" title="Update all workflows" 

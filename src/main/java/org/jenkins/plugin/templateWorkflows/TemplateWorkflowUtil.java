@@ -1,7 +1,36 @@
 package org.jenkins.plugin.templateWorkflows;
 
+import hudson.model.Item;
+import hudson.model.Job;
+
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+import jenkins.model.Jenkins;
+
 public class TemplateWorkflowUtil {
 
+	public static Set<String> getAllWorkflowTemplateNames() {
+		
+		Set<String> allWorkflowTemplateNames = new LinkedHashSet<String>();
+
+		List<Item> allItems = Jenkins.getInstance().getAllItems();
+		for (Item i : allItems) {
+			Collection<? extends Job> allJobs = i.getAllJobs();
+			for (Job j : allJobs) {
+				TemplateWorkflowProperty t = (TemplateWorkflowProperty) j.getProperty(TemplateWorkflowProperty.class);
+				if (t != null && t.getTemplateName() != null) {
+					for (String tName : t.getTemplateName().split(",")) {
+						allWorkflowTemplateNames.add(tName.trim());
+					}
+				}
+			}
+		}
+		return allWorkflowTemplateNames;
+	}	
+	
 	/*
 	
 	private void createOrUpdate(final String operation, final Map<String, String> replacementsParams, final Map<String, String> replacementsJobs) throws IOException {
@@ -68,24 +97,6 @@ public class TemplateWorkflowUtil {
 				return null;
 			}
 		}
-	}
-
-	public Set<String> getTemplateNames() {
-		Set<String> ret = new LinkedHashSet<String>();
-
-		List<Item> allItems = Jenkins.getInstance().getAllItems();
-		for (Item i : allItems) {
-			Collection<? extends Job> allJobs = i.getAllJobs();
-			for (Job j : allJobs) {
-				TemplateWorkflowProperty t = (TemplateWorkflowProperty) j.getProperty(TemplateWorkflowProperty.class);
-				if (t != null && t.getTemplateName() != null) {
-					for (String tName : t.getTemplateName().split(",")) {
-						ret.add(tName.trim());
-					}
-				}
-			}
-		}
-		return ret;
 	}
 
 	@JavaScriptMethod

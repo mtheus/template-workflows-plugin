@@ -10,7 +10,7 @@
 					<img width="16" height="16"
 						src="${rootURL}/images/16x16/orange-square.png" />
 					<a style="padding-left:5px;"
-						onclick="selectInstance('${instance.instanceName}'); return false;"
+						onclick="selectInstance('${instance.instanceName}');"
 						href="${rootURL}/${it.url}configureWorkflow">
 						${instance.instanceName}
 					</a>
@@ -32,6 +32,7 @@
 		function selectInstance(instanceName) {
 			var ctrl = <st:bind value="${it}" />
 			ctrl.selectInstance(instanceName, function(t) {});
+			//return true;
 		}
 
 	</script>
