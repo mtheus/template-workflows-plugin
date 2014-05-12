@@ -3,12 +3,22 @@ package org.jenkins.plugin.templateWorkflows;
 import hudson.model.Item;
 import hudson.model.Job;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import jenkins.model.Jenkins;
+
+import org.apache.commons.io.FileUtils;
 
 public class TemplateWorkflowUtil {
 
@@ -29,7 +39,61 @@ public class TemplateWorkflowUtil {
 			}
 		}
 		return allWorkflowTemplateNames;
-	}	
+	}
+	
+	public static List<Job> getRelatedJobs(final String templateName) {
+		List<Job> relatedJobs = new ArrayList<Job>();
+		List<Item> allItems = Jenkins.getInstance().getAllItems();
+		for (Item i : allItems) {
+			Collection<? extends Job> allJobs = i.getAllJobs();
+			for (Job j : allJobs) {
+				TemplateWorkflowProperty t = (TemplateWorkflowProperty) j.getProperty(TemplateWorkflowProperty.class);
+				if (t != null) {
+					for (String tName : t.getTemplateName().split(",")) {
+						if (templateName.equalsIgnoreCase(tName.trim())) {
+							relatedJobs.add(j);
+						}
+					}
+				}
+			}
+		}
+		return relatedJobs;
+	}
+	
+	public static Map<String, String> getTemplateParamaters(final String templateName) {
+
+		try {
+
+			List<Job> relatedJobs = getRelatedJobs(templateName);
+
+			Pattern pattern = Pattern.compile("@@(.*?)@@");
+
+			Map<String, String> jobParameters = new HashMap<String, String>();
+			for (Job job : relatedJobs) {
+				List<String> lines;
+				lines = FileUtils.readLines(job.getConfigFile().getFile());
+				for (String line : lines) {
+					Matcher matcher = pattern.matcher(line);
+					while (matcher.find()) {
+						jobParameters.put(matcher.group(1), null);
+					}
+				}
+			}
+
+			Map<String, String> map = new LinkedHashMap<String, String>();
+			List<String> paramsName = new ArrayList<String>(jobParameters.keySet());
+			Collections.sort(paramsName);
+			for (String k : paramsName) {
+				map.put(k, jobParameters.get(k));
+			}
+
+			return map;
+
+		} catch (IOException e) {
+			return new HashMap<String, String>();
+		}
+
+	}
 	
 	/*
 	
@@ -445,49 +509,8 @@ public class TemplateWorkflowUtil {
 		}
 	}
 
-	private List<Job> getRelatedJobs(final String templateName) {
-		List<Job> relatedJobs = new ArrayList<Job>();
-		List<Item> allItems = Jenkins.getInstance().getAllItems();
-		for (Item i : allItems) {
-			Collection<? extends Job> allJobs = i.getAllJobs();
-			for (Job j : allJobs) {
-				TemplateWorkflowProperty t = (TemplateWorkflowProperty) j.getProperty(TemplateWorkflowProperty.class);
-				if (t != null) {
-					for (String tName : t.getTemplateName().split(",")) {
-						if (templateName.equalsIgnoreCase(tName.trim())) {
-							relatedJobs.add(j);
-						}
-					}
-				}
-			}
-		}
-
-		return relatedJobs;
-	}
-
-	private Map<String, String> getTemplateParamaters(final List<Job> relatedJobs) throws IOException {
-		Pattern pattern = Pattern.compile("@@(.*?)@@");
-
-		Map<String, String> jobParameters = new HashMap<String, String>();
-		for (Job job : relatedJobs) {
-			List<String> lines = FileUtils.readLines(job.getConfigFile().getFile());
-			for (String line : lines) {
-				Matcher matcher = pattern.matcher(line);
-				while (matcher.find()) {
-					jobParameters.put(matcher.group(1), null);
-				}
-			}
-		}
-
-		Map<String, String> map = new LinkedHashMap<String, String>();
-		List<String> paramsName = new ArrayList<String>(jobParameters.keySet());
-		Collections.sort(paramsName);
-		for (String k : paramsName) {
-			map.put(k, jobParameters.get(k));
-		}
-
-		return map;
-	}
+	
+	
 
 	private void addTemplateInfo(final String instanceName, final Map<String, String> replacementsParams, final Map<String, String> replacementsJobs,
 			final Map<String, Boolean> isNewJobMap) throws IOException {

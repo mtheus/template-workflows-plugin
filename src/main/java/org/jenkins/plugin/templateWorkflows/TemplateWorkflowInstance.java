@@ -39,6 +39,7 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 
 	@Exported
 	public int getRelatedJobsSize() {
+		if( this.relatedJobs == null ) return 0;
 		return this.relatedJobs.size();
 	}
 

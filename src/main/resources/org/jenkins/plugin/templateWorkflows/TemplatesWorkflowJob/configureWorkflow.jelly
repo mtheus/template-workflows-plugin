@@ -31,6 +31,7 @@
 						<!-- fixme: there are some trick here, change later: i think this is acceptable onchange="document.getElementsByName('workflowConfigForm')[0].submit()" -->
 						<!-- another option is use the ajaxapi, but there are side effects, like post loop. <f:select onchange="document.getElementById('yui-gen1-button').click();"/> -->
 						<select class="setting-input" name="templateName" onchange="document.getElementById('formevent').click();">
+							<f:option selected="${null==it.templateName}" value=""></f:option>
 							<j:forEach var="opt" items="${it.getAllWorkflowTemplateNames()}">
 								<f:option selected="${opt==it.templateName}"
 									value="${opt}">${opt}</f:option>
@@ -65,13 +66,13 @@
 							<td class="pane-header">${%Job to copy}</td>
 						</tr>
 
-						<j:forEach var="instance" items="${it.templateInstances}">
+						<j:forEach var="relation" items="${it.getJobRelation()}">
 							<tr>
 								<td>
-									<span>${instance.instanceName}</span>
+									<span>${relation.key}</span>
 								</td>
 								<td>
-									<f:textbox value="${instance.instanceName}" />
+									<f:textbox name="relatedJob#${relation.key}" value="${relation.value}" />
 									<j:if
 										test="${!empty(it.getErrorMessages('templateInstanceJob.'+instance.instanceName))}">
 										<j:forEach var="msg"
@@ -94,13 +95,13 @@
 							<td class="pane-header">${%Property Value}</td>
 						</tr>
 
-						<j:forEach var="instance" items="${it.templateInstances}">
+						<j:forEach var="parameter" items="${it.getJobParameters()}">
 							<tr>
 								<td>
-									<span>${instance.instanceName}</span>
+									<span>${parameter.key}</span>
 								</td>
 								<td>
-									<f:textbox name="teste1" value="${instance.instanceName}" />
+									<f:textbox name="parameter#${parameter.key}" value="${parameter.value}" />
 								</td>
 							</tr>
 						</j:forEach>

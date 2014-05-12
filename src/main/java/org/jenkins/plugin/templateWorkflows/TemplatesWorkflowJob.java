@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.servlet.ServletException;
@@ -32,7 +33,7 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, TemplateswWorkflowRun> implements TopLevelItem {
 
-	private static final String ACTION_REFRESH = "Refresh";
+	private static final String ACTION_REFRESH = "FormEvent";
 	private static final String ACTION_SAVE = "Save";
 	private static final String ACTION_DELETE = "Delete";
 
@@ -77,19 +78,19 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			
 			this.templateInstanceName = selectedInstance.getInstanceName();
 			this.templateName = selectedInstance.getTemplateName();
-			//TODO: Fill the from with new fields
+			fillJobRelation();
+			fillJobParameters();
 		}
 		
 		return new JSONObject();
 	}
 
 
-	
 	public synchronized void doConfigWorkflow(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException, FormException {
 
 		//TODO: There are some security issues? 
 		
-		getErrorMessages().clear();
+		getErrorMap().clear();
 		
 		String postedAction = req.getParameter("action");
 		if(null == postedAction){
@@ -102,21 +103,36 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		useTemplatePrefix = submittedForm.getBoolean("useTemplatePrefix");
 		useExistingJob = submittedForm.getBoolean("useExistingJob");
 		
+		for (Object key : submittedForm.keySet()) {
+			if(key.toString().startsWith("relatedJob")){
+				String[] keyArr = key.toString().split("#");
+				String jobKey = keyArr.length == 1 ? null : keyArr[1];
+				jobRelation.put(jobKey, submittedForm.getString(key.toString()));				
+			}
+			if(key.toString().startsWith("parameter")){
+				String[] keyArr = key.toString().split("#");
+				String jobKey = keyArr.length == 1 ? null : keyArr[1];
+				jobParameters.put(jobKey, submittedForm.getString(key.toString()));				
+			}			
+		}
+		
+		
 		if(ACTION_DELETE.equals(postedAction)){			
-			templateInstances.getInstances().remove(selectedInstance);			
+			templateInstances.getInstances().remove(selectedInstance.getInstanceName());			
 			finishAndRedirect(req, rsp);
 		}
 		else if(ACTION_REFRESH.equals(postedAction)){
 			
 			// Fill de maps
-			
+			fillJobRelation();
+			fillJobParameters();
 			forwardBack(req, rsp);
 		}
 		else if(ACTION_SAVE.equals(postedAction)){
 			
 			validateForm(submittedForm);
 			
-			if(!getErrorMessages().isEmpty()){
+			if(!getErrorMap().isEmpty()){
 				forwardBack(req, rsp);
 			}
 			else {
@@ -141,6 +157,32 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 
 	}
 
+	
+	@SuppressWarnings("rawtypes")
+	private void fillJobRelation() {
+
+		List<Job> reletedJob = TemplateWorkflowUtil.getRelatedJobs(templateName);
+		Map<String, String> newJobRelation = getJobRelation();
+		newJobRelation.clear();
+		for (Job job : reletedJob) {
+			newJobRelation.put(job.getName(), jobRelation.get(job.getName()));
+		}		
+		jobRelation = newJobRelation;
+		
+	}
+	
+	private void fillJobParameters() {
+		
+		Map<String, String> reletedProperties = TemplateWorkflowUtil.getTemplateParamaters(templateName);
+		Map<String, String> newJobParameters = getJobParameters();
+		newJobParameters.clear();
+		for (Entry<String, String> entry : reletedProperties.entrySet()) {
+			newJobParameters.put(entry.getKey(), jobRelation.get(entry.getKey()));
+		}		
+		jobParameters = newJobParameters;
+		
+	}
+
 	private void forwardBack(StaplerRequest req, StaplerResponse rsp) throws ServletException, IOException {
 		rsp.forwardToPreviousPage(req);
 	}
@@ -161,7 +203,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	}
 	
 	private void cleanFields() {
-		getErrorMessages().clear();
+		getErrorMap().clear();
 		this.templateInstanceName = null;
 		this.templateName = null;		
 		this.useTemplatePrefix = null;
@@ -170,6 +212,20 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		this.jobRelation = null;
 		
 	}
+	
+	public Map<String, String> getJobRelation() {
+		if(jobRelation == null){
+			jobRelation = new HashMap<String, String>();
+		}
+		return jobRelation;
+	}
+	
+	public Map<String, String> getJobParameters() {
+		if(jobParameters == null){
+			jobParameters = new HashMap<String, String>();
+		}
+		return jobParameters;
+	}	
 
 	public String getTemplateName() {
 		return this.templateName;
@@ -222,13 +278,18 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	}
 	
 	public List<String> getErrorMessages(String fieldId) {
-		if (errorMessages == null) {
-			errorMessages = new HashMap<String,List<String>>();
-		}
+		getErrorMap();
 		if(!errorMessages.containsKey(fieldId)){
 			return new ArrayList<String>();
 		}
 		return errorMessages.get(fieldId);
+	}
+
+	private Map<String, List<String>> getErrorMap() {
+		if (errorMessages == null) {
+			errorMessages = new HashMap<String,List<String>>();
+		}
+		return errorMessages;
 	}
 	
 	private void addMessage(String fieldId, String message){
