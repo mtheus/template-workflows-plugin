@@ -15,6 +15,8 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 	private String templateName;
 	private Map<String, String> jobParameters;
 	private Map<String, String> relatedJobs;
+	private Boolean useTemplatePrefix;
+	private Boolean useExistingJob;	
 
 	public TemplateWorkflowInstance() {
 	}
@@ -77,4 +79,21 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 	public int compareTo(final TemplateWorkflowInstance o) {
 		return this.instanceName.compareTo(o.instanceName);
 	}
+
+	public Boolean getUseTemplatePrefix() {
+		return useTemplatePrefix;
+	}
+
+	public void setUseTemplatePrefix(Boolean useTemplatePrefix) {
+		this.useTemplatePrefix = useTemplatePrefix;
+	}
+
+	public Boolean getUseExistingJob() {
+		return useExistingJob;
+	}
+
+	public void setUseExistingJob(Boolean useExistingJob) {
+		this.useExistingJob = useExistingJob;
+	}
+	
 }

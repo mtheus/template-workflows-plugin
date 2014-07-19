@@ -78,6 +78,10 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			
 			this.templateInstanceName = selectedInstance.getInstanceName();
 			this.templateName = selectedInstance.getTemplateName();
+			this.useExistingJob = selectedInstance.getUseExistingJob();
+			this.useTemplatePrefix = selectedInstance.getUseTemplatePrefix();
+			this.jobParameters =  selectedInstance.getJobParameters();
+			this.jobRelation = selectedInstance.getRelatedJobs();
 			fillJobRelation();
 			fillJobParameters();
 		}
@@ -102,6 +106,13 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		templateInstanceName = submittedForm.getString("templateInstanceName");
 		useTemplatePrefix = submittedForm.getBoolean("useTemplatePrefix");
 		useExistingJob = submittedForm.getBoolean("useExistingJob");
+		
+		if( useTemplatePrefix == null ){
+			useTemplatePrefix = Boolean.TRUE;
+		}
+		if( useTemplatePrefix == null ){
+			useExistingJob = Boolean.FALSE;
+		}
 		
 		for (Object key : submittedForm.keySet()) {
 			if(key.toString().startsWith("relatedJob")){
@@ -144,10 +155,17 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 					addMessage(null, "Rename Workflow is not supported yet!");
 					forwardBack(req, rsp);
 					return;
+				}				
+				
+				selectedInstance.setTemplateName(templateName);
+				selectedInstance.setUseExistingJob(useExistingJob);
+				selectedInstance.setUseTemplatePrefix(useTemplatePrefix);
+				selectedInstance.setJobParameters(jobParameters);
+				selectedInstance.setRelatedJobs(jobRelation);
+				
+				if(templateInstances == null){
+					templateInstances = new TemplateWorkflowInstances();
 				}
-				
-				// TODO: copy values to selectedInstance.
-				
 				
 				templateInstances.getInstances().put(selectedInstance.getInstanceName(), selectedInstance); 				
 				finishAndRedirect(req, rsp);
@@ -162,11 +180,16 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	private void fillJobRelation() {
 
 		List<Job> reletedJob = TemplateWorkflowUtil.getRelatedJobs(templateName);
-		Map<String, String> newJobRelation = getJobRelation();
-		newJobRelation.clear();
+		Map<String, String> newJobRelation = new HashMap<String, String>();
 		for (Job job : reletedJob) {
-			newJobRelation.put(job.getName(), jobRelation.get(job.getName()));
-		}		
+			if(getJobRelation().containsKey(job.getName())){
+				newJobRelation.put(job.getName(), getJobRelation().get(job.getName()));
+			} else if(useTemplatePrefix != null && useTemplatePrefix){
+				newJobRelation.put(job.getName(), templateInstanceName + "-" + job.getName());
+			} else {
+				newJobRelation.put(job.getName(), null);				
+			}
+		}
 		jobRelation = newJobRelation;
 		
 	}
@@ -174,10 +197,9 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	private void fillJobParameters() {
 		
 		Map<String, String> reletedProperties = TemplateWorkflowUtil.getTemplateParamaters(templateName);
-		Map<String, String> newJobParameters = getJobParameters();
-		newJobParameters.clear();
+		Map<String, String> newJobParameters = new HashMap<String, String>();
 		for (Entry<String, String> entry : reletedProperties.entrySet()) {
-			newJobParameters.put(entry.getKey(), jobRelation.get(entry.getKey()));
+			newJobParameters.put(entry.getKey(), getJobParameters().get(entry.getKey()));
 		}		
 		jobParameters = newJobParameters;
 		
@@ -200,14 +222,22 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			addMessage("templateInstanceName", "Workflow Name is required");
 		}
 		
+		//TODO: Validate if job exists
+		
+		if(useExistingJob){
+			// alow exisiting job 
+		}
+		
+		// TODO: Validate if job is in progress
+		
 	}
 	
 	private void cleanFields() {
 		getErrorMap().clear();
 		this.templateInstanceName = null;
 		this.templateName = null;		
-		this.useTemplatePrefix = null;
-		this.useExistingJob = null ;	
+		this.useTemplatePrefix = Boolean.TRUE;
+		this.useExistingJob = Boolean.FALSE;	
 		this.jobParameters = null;
 		this.jobRelation = null;
 		
@@ -336,23 +366,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		@Override
 		public TopLevelItem newInstance(final ItemGroup paramItemGroup, final String paramString) {
 			return new TemplatesWorkflowJob(Jenkins.getInstance(), paramString);
-			//return templatesWorkflowJob;
 		}
-/*
-		public ListBoxModel doFillTemplateNameItems(@QueryParameter String templateName) {
-			if (this.templatesWorkflowJob != null)
-				this.templatesWorkflowJob.templateName = templateName;
-			ListBoxModel m = new ListBoxModel();
-			m.add("Teste2a", "teste2a");
-			m.add("Teste2b", "teste2b");
-			m.add("Teste2c", "teste2c");
-			return m;
-		}
-*/
-
-		// public FormValidation doCheckCount(@QueryParameter String value) {
-		// return FormValidation.validatePositiveInteger(value);
-		// }
 
 	}
 

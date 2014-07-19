@@ -20,6 +20,7 @@ import jenkins.model.Jenkins;
 
 import org.apache.commons.io.FileUtils;
 
+@SuppressWarnings({ "rawtypes", "unchecked" })
 public class TemplateWorkflowUtil {
 
 	public static Set<String> getAllWorkflowTemplateNames() {
@@ -50,7 +51,7 @@ public class TemplateWorkflowUtil {
 				TemplateWorkflowProperty t = (TemplateWorkflowProperty) j.getProperty(TemplateWorkflowProperty.class);
 				if (t != null) {
 					for (String tName : t.getTemplateName().split(",")) {
-						if (templateName.equalsIgnoreCase(tName.trim())) {
+						if (templateName != null && templateName.equalsIgnoreCase(tName.trim())) {
 							relatedJobs.add(j);
 						}
 					}

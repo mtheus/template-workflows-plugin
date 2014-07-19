@@ -27,18 +27,6 @@
 						</j:if>
 					</f:block>
 
-					<f:entry title="Template Name" field="templateName">
-						<!-- fixme: there are some trick here, change later: i think this is acceptable onchange="document.getElementsByName('workflowConfigForm')[0].submit()" -->
-						<!-- another option is use the ajaxapi, but there are side effects, like post loop. <f:select onchange="document.getElementById('yui-gen1-button').click();"/> -->
-						<select class="setting-input" name="templateName" onchange="document.getElementById('formevent').click();">
-							<f:option selected="${null==it.templateName}" value=""></f:option>
-							<j:forEach var="opt" items="${it.getAllWorkflowTemplateNames()}">
-								<f:option selected="${opt==it.templateName}"
-									value="${opt}">${opt}</f:option>
-							</j:forEach>
-						</select>
-					</f:entry>
-
 					<f:entry title="Workflow Name" field="templateInstanceName">
 						<f:textbox />
 						<j:if test="${!empty(it.getErrorMessages('templateInstanceName'))}">
@@ -51,7 +39,19 @@
 
 					<f:entry field="useTemplatePrefix">
 						<f:checkbox />
-						${%Use template name as job prefix}
+						${%Use workflow name as job prefix}
+					</f:entry>
+
+					<f:entry title="Template Name" field="templateName">
+						<!-- fixme: there are some trick here, change later: i think this is acceptable onchange="document.getElementsByName('workflowConfigForm')[0].submit()" -->
+						<!-- another option is use the ajaxapi, but there are side effects, like post loop. <f:select onchange="document.getElementById('yui-gen1-button').click();"/> -->
+						<select class="setting-input" name="templateName" onchange="document.getElementById('formevent').click();">
+							<f:option selected="${null==it.templateName}" value=""></f:option>
+							<j:forEach var="opt" items="${it.getAllWorkflowTemplateNames()}">
+								<f:option selected="${opt==it.templateName}"
+									value="${opt}">${opt}</f:option>
+							</j:forEach>
+						</select>
 					</f:entry>
 
 					<f:entry field="useExistingJob">
