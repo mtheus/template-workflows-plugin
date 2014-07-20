@@ -1,9 +1,10 @@
 package org.jenkins.plugin.templateWorkflows;
 
 import hudson.Extension;
-import hudson.model.AbstractProject;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
+import hudson.model.AbstractProject;
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -12,7 +13,9 @@ import org.kohsuke.stapler.StaplerRequest;
 public class TemplateWorkflowProperty extends JobProperty<AbstractProject<?, ?>> {
 
 	private String templateName;
-	private boolean isStartingWorkflowJob;
+	@Deprecated	private boolean isStartingWorkflowJob;
+	private boolean isWorkflowCreatedJob;
+	private String workFlowJobName;
 
 	public boolean getIsStartingWorkflowJob() {
 		return isStartingWorkflowJob;
@@ -21,15 +24,37 @@ public class TemplateWorkflowProperty extends JobProperty<AbstractProject<?, ?>>
 	public void setStartingWorkflowJob(boolean isStartingWorkflowJob) {
 		this.isStartingWorkflowJob = isStartingWorkflowJob;
 	}
+	
+	public boolean isWorkflowCreatedJob() {
+		return isWorkflowCreatedJob;
+	}
+
+	public void setWorkflowCreatedJob(boolean isWorkflowCreatedJob) {
+		this.isWorkflowCreatedJob = isWorkflowCreatedJob;
+	}
 
 	public void setTemplateName(String templateName) {
 		this.templateName = templateName;
+	}	
+	
+	public String getWorkFlowJobName() {
+		return workFlowJobName;
+	}
+	
+	public String getFullWorkFlowJobName() {
+		return Jenkins.getInstance().getRootUrl() + "job/" + workFlowJobName;
+	}	
+
+	public void setWorkFlowJobName(String workFlowJobName) {
+		this.workFlowJobName = workFlowJobName;
 	}
 
 	@DataBoundConstructor
-	public TemplateWorkflowProperty(String templateName, boolean isStartingWorkflowJob) {
+	public TemplateWorkflowProperty(String templateName, boolean isStartingWorkflowJob, boolean isWorkflowCreatedJob, String workFlowJobName) {		
 		this.templateName = templateName;
 		this.isStartingWorkflowJob = isStartingWorkflowJob;
+		this.isWorkflowCreatedJob = isWorkflowCreatedJob;
+		this.workFlowJobName = workFlowJobName;
 	}
 
 	public String getTemplateName() {
