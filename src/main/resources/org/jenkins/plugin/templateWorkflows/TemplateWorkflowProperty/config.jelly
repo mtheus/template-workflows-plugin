@@ -1,16 +1,18 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:sl="/hudson/plugins/copy_from_template">
-	<j:if test="${!it.isWorkflowCreatedJob()}">
+	<j:if test="${!instance.isWorkflowCreatedJob()}">
 		<f:optionalBlock name="template-project" title="Mark as a Building Block in a Template Workflow" checked="${!empty(instance.templateName)}">
 			<f:entry title="Template Workflow Name" field="templateName">
 				<f:textbox />
 			</f:entry>
-		</f:optionalBlock>
+		</f:optionalBlock>		
 	</j:if>
-	<j:if test="${it.isWorkflowCreatedJob()}">
-        <div class="warning">
-           <b>WARNING: This Job is updated by <a href="${it.getFullWorkFlowJobName()}">${it.getWorkFlowJobName()}</a>. Any changes you make will be lost.</b>
+	<j:if test="${instance.isWorkflowCreatedJob()}">
+		<br/>
+        <div class="warning">        	
+            <b>WARNING: This Job is updated by <a href="${instance.getFullWorkFlowJobName()}">${instance.getWorkflowJobName()}/${instance.getWorkflowName()}</a>. Any changes you make will be lost.</b>            
         </div>
+        <br/>
 	</j:if>
 	
 </j:jelly>

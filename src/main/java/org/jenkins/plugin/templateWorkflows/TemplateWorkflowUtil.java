@@ -2,6 +2,7 @@ package org.jenkins.plugin.templateWorkflows;
 
 import hudson.model.Item;
 import hudson.model.AbstractProject;
+import hudson.model.FreeStyleProject;
 import hudson.model.Job;
 
 import java.io.ByteArrayInputStream;
@@ -55,7 +56,7 @@ public class TemplateWorkflowUtil {
 			Collection<? extends Job> allJobs = i.getAllJobs();
 			for (Job j : allJobs) {
 				TemplateWorkflowProperty t = (TemplateWorkflowProperty) j.getProperty(TemplateWorkflowProperty.class);
-				if (t != null) {
+				if (t != null && !t.isWorkflowCreatedJob()) {
 					for (String tName : t.getTemplateName().split(",")) {
 						if (templateName != null && templateName.equalsIgnoreCase(tName.trim())) {
 							relatedJobs.add(j);
@@ -151,12 +152,16 @@ public class TemplateWorkflowUtil {
 		for (Item i : allItems) {
 			Collection<? extends Job> allJobs = i.getAllJobs();
 			for (Job j : allJobs) {
-				if (j.getName().equalsIgnoreCase(jobName)) {
-					used = true;
-				}
+				TemplateWorkflowProperty templateWorkflowProperty = (TemplateWorkflowProperty) j.getProperty(TemplateWorkflowProperty.class);
+				if(templateWorkflowProperty != null){
+					if( !templateWorkflowProperty.isWorkflowCreatedJob() ){
+						if (j.getName().equalsIgnoreCase(jobName)) {
+							used = true;
+						}		
+					}
+				}				
 			}
 		}
-		
 		return used;
 		
 	}
@@ -176,7 +181,7 @@ public class TemplateWorkflowUtil {
 		return result;		
 	}
 	
-	public static boolean createOrUpdate(final String workflowJobName, final String templateJobName, final String clonedJobName, final Map<String, String> clonedJobParams, final Map<String, String> clonedJobGroup) throws Exception {
+	public static boolean createOrUpdate(final String workflowJobName, final String workflowName, final String templateJobName, final String clonedJobName, final Map<String, String> clonedJobParams, final Map<String, String> clonedJobGroup) throws Exception {
 
 		Job templateJob = (Job) Jenkins.getInstance().getItem(templateJobName);
 		//TemplateWorkflowProperty templateWorkflowProperty = (TemplateWorkflowProperty) job.getProperty(TemplateWorkflowProperty.class);
@@ -204,9 +209,13 @@ public class TemplateWorkflowUtil {
 			}
 			TemplateWorkflowProperty property = (TemplateWorkflowProperty) clonedJob.getProperty(TemplateWorkflowProperty.class);
 			property.setWorkflowCreatedJob(Boolean.TRUE);
-			property.setWorkFlowJobName(workflowJobName);
-			//TODO: Remove disabled property
+			property.setWorkflowJobName(workflowJobName);
+			property.setWorkflowName(workflowName);
 			//clonedJob.removeProperty(TemplateWorkflowProperty.class);
+			//TODO: Remove disabled property - put a checkbox in the screen
+			if(clonedJob instanceof FreeStyleProject){
+				((FreeStyleProject)clonedJob).enable();
+			}
 			clonedJob.save();
 			
 		} finally {

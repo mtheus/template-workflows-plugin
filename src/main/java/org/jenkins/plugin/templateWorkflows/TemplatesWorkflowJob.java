@@ -173,7 +173,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				
 				// do the magic				
 				for (Entry<String, String> entry : jobRelation.entrySet()) {
-					TemplateWorkflowUtil.createOrUpdate(selectedInstance.getInstanceName(), 
+					TemplateWorkflowUtil.createOrUpdate(this.getName(), selectedInstance.getInstanceName(), 
 							entry.getKey(), entry.getValue(), 
 							jobParameters, jobRelation);					
 				}
@@ -245,7 +245,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				//TODO: check for properties?
 			} else {
 				try {
-					if( !TemplateWorkflowUtil.notUsesJobName(entry.getValue()) ){
+					if( TemplateWorkflowUtil.notUsesJobName(entry.getValue()) ){
 						addMessage(null, String.format("The name '%s' is been used by another Job.",entry.getValue()));
 					}
 				} catch (Exception e) {}
