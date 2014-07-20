@@ -102,7 +102,7 @@ public class TemplateWorkflowUtil {
 
 	}
 	
-	public String getJobStatus(final String jobName) {
+	public static String getJobStatus(final String jobName) {
 		String status = null;
 		
 		AbstractProject job = (AbstractProject) Jenkins.getInstance().getItem(jobName);
@@ -115,7 +115,7 @@ public class TemplateWorkflowUtil {
 		return status;
 	}
 	
-	public TemplateWorkflowProperty getTemplateWorkflowProperty(final String jobName) {
+	public static TemplateWorkflowProperty getTemplateWorkflowProperty(final String jobName) {
 	
 		Job job = (Job) Jenkins.getInstance().getItem(jobName);
 		TemplateWorkflowProperty templateWorkflowProperty = (TemplateWorkflowProperty) job.getProperty(TemplateWorkflowProperty.class);
@@ -123,7 +123,7 @@ public class TemplateWorkflowUtil {
 	}
 	
 	
-	public void deleteJob(final String jobName) throws Exception {
+	public static void deleteJob(final String jobName) throws Exception {
 		
 		// TODO: JOB check id created by template workflow
 		
@@ -139,7 +139,7 @@ public class TemplateWorkflowUtil {
 		
 	}
 	
-	public boolean notUsetJob(final String jobName) throws Exception {
+	public static boolean notUsesJobName(final String jobName) throws Exception {
 		
 		boolean used = false;
 		
@@ -161,7 +161,7 @@ public class TemplateWorkflowUtil {
 		
 	}
 	
-	public List<Job> findAllWorkflowsInstances() {
+	public static List<Job> findAllWorkflowsInstancesJobs() {
 		List<Job> result = new ArrayList<Job>();
 		List<Item> allItems = Jenkins.getInstance().getAllItems();
 		for (Item i : allItems) {
@@ -176,7 +176,7 @@ public class TemplateWorkflowUtil {
 		return result;		
 	}
 	
-	public boolean createOrUpdate(final String workflowJobName, final String templateJobName, final String clonedJobName, final Map<String, String> clonedJobParams, final Map<String, String> clonedJobGroup) throws Exception {
+	public static boolean createOrUpdate(final String workflowJobName, final String templateJobName, final String clonedJobName, final Map<String, String> clonedJobParams, final Map<String, String> clonedJobGroup) throws Exception {
 
 		Job templateJob = (Job) Jenkins.getInstance().getItem(templateJobName);
 		//TemplateWorkflowProperty templateWorkflowProperty = (TemplateWorkflowProperty) job.getProperty(TemplateWorkflowProperty.class);

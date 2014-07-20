@@ -6,7 +6,6 @@ import hudson.model.TopLevelItem;
 import hudson.model.TopLevelItemDescriptor;
 import hudson.model.ViewJob;
 import hudson.model.AbstractProject.AbstractProjectDescriptor;
-import hudson.model.Descriptor.FormException;
 import hudson.model.Job;
 
 import java.io.IOException;
@@ -90,7 +89,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	}
 
 
-	public synchronized void doConfigWorkflow(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException, FormException {
+	public synchronized void doConfigWorkflow(StaplerRequest req, StaplerResponse rsp) throws Exception {
 
 		//TODO: There are some security issues? 
 		
@@ -126,15 +125,18 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				jobParameters.put(jobKey, submittedForm.getString(key.toString()));				
 			}			
 		}
-		
-		
-		if(ACTION_DELETE.equals(postedAction)){			
-			templateInstances.getInstances().remove(selectedInstance.getInstanceName());			
+				
+		if(ACTION_DELETE.equals(postedAction)){
+			templateInstances.getInstances().remove(selectedInstance.getInstanceName());
+			if(selectedInstance.getUseExistingJob() != null && !selectedInstance.getUseExistingJob() ){
+				for (Entry<String, String> entry : jobRelation.entrySet()) {
+					TemplateWorkflowUtil.deleteJob(entry.getValue());
+				}				
+			}
 			finishAndRedirect(req, rsp);
 		}
 		else if(ACTION_REFRESH.equals(postedAction)){
 			
-			// Fill de maps
 			fillJobRelation();
 			fillJobParameters();
 			forwardBack(req, rsp);
@@ -151,11 +153,11 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				if(selectedInstance.getInstanceName() == null){ // is new
 					selectedInstance.setInstanceName( templateInstanceName );
 				} else if( !selectedInstance.getInstanceName().equals(templateInstanceName)){ // renamed
-					// todo: check name conflict
+					// TODO: check name conflict
 					addMessage(null, "Rename Workflow is not supported yet!");
 					forwardBack(req, rsp);
 					return;
-				}				
+				}
 				
 				selectedInstance.setTemplateName(templateName);
 				selectedInstance.setUseExistingJob(useExistingJob);
@@ -167,7 +169,15 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 					templateInstances = new TemplateWorkflowInstances();
 				}
 				
-				templateInstances.getInstances().put(selectedInstance.getInstanceName(), selectedInstance); 				
+				templateInstances.getInstances().put(selectedInstance.getInstanceName(), selectedInstance);
+				
+				// do the magic				
+				for (Entry<String, String> entry : jobRelation.entrySet()) {
+					TemplateWorkflowUtil.createOrUpdate(selectedInstance.getInstanceName(), 
+							entry.getKey(), entry.getValue(), 
+							jobParameters, jobRelation);					
+				}
+				
 				finishAndRedirect(req, rsp);
 			}
 			
@@ -220,15 +230,37 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		this.templateInstanceName = StringUtils.trimToEmpty(templateInstanceName);
 		if(StringUtils.isEmpty(templateInstanceName)){
 			addMessage("templateInstanceName", "Workflow Name is required");
+			return;
 		}
 		
-		//TODO: Validate if job exists
-		
-		if(useExistingJob){
-			// alow exisiting job 
+		for (Entry<String, String> entry : jobRelation.entrySet()) {
+			
+			if(StringUtils.isEmpty(entry.getValue())){
+				addMessage(null, String.format("We need a not used name to clone the Job '%s'.",entry.getKey()));
+				continue;
+			}
+			
+			if(useExistingJob){
+				// alow exisiting job
+				//TODO: check for properties?
+			} else {
+				try {
+					if( !TemplateWorkflowUtil.notUsesJobName(entry.getValue()) ){
+						addMessage(null, String.format("The name '%s' is been used by another Job.",entry.getValue()));
+					}
+				} catch (Exception e) {}
+			}
+			
+			String status = TemplateWorkflowUtil.getJobStatus(entry.getValue());
+			if(status != null){
+				addMessage(null, String.format("There are required Job '%s' with status %s.", entry.getValue(), status));
+			}
+			status = TemplateWorkflowUtil.getJobStatus(entry.getKey());
+			if(status != null){
+				addMessage(null, String.format("There are required Job '%s' with status %s.", entry.getKey(), status));
+			}
+			
 		}
-		
-		// TODO: Validate if job is in progress
 		
 	}
 	
