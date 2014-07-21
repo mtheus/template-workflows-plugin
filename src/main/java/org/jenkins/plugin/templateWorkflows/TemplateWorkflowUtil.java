@@ -123,10 +123,20 @@ public class TemplateWorkflowUtil {
 		return templateWorkflowProperty;
 	}
 	
+	public static void deleteJobProperty(final String jobName) throws Exception {
+
+		String jobStatus = getJobStatus(jobName);
+		if(jobStatus != null){
+			throw new Exception(String.format("The Job %s is %s.", jobName, jobStatus));
+		}
+		
+		Job job = (Job) Jenkins.getInstance().getItem(jobName);
+		if (job != null) {
+			job.removeProperty(TemplateWorkflowProperty.class);
+		}		
+	}
 	
 	public static void deleteJob(final String jobName) throws Exception {
-		
-		// TODO: JOB check id created by template workflow
 		
 		String jobStatus = getJobStatus(jobName);
 		if(jobStatus != null){
@@ -148,20 +158,18 @@ public class TemplateWorkflowUtil {
 			throw new Exception("Empty Job Name.");
 		}
 
-		List<Item> allItems = Jenkins.getInstance().getAllItems();
-		for (Item i : allItems) {
-			Collection<? extends Job> allJobs = i.getAllJobs();
-			for (Job j : allJobs) {
-				TemplateWorkflowProperty templateWorkflowProperty = (TemplateWorkflowProperty) j.getProperty(TemplateWorkflowProperty.class);
-				if(templateWorkflowProperty != null){
-					if( !templateWorkflowProperty.isWorkflowCreatedJob() ){
-						if (j.getName().equalsIgnoreCase(jobName)) {
-							used = true;
-						}		
-					}
-				}				
+		Job job = (Job) Jenkins.getInstance().getItem(jobName);
+		if(job != null){
+			TemplateWorkflowProperty templateWorkflowProperty = (TemplateWorkflowProperty) job.getProperty(TemplateWorkflowProperty.class);
+			if(templateWorkflowProperty == null){
+				used = true;
+			} else {
+				if( !templateWorkflowProperty.isWorkflowCreatedJob() ){
+					used = true;
+				}
 			}
 		}
+		
 		return used;
 		
 	}
@@ -184,7 +192,6 @@ public class TemplateWorkflowUtil {
 	public static boolean createOrUpdate(final String workflowJobName, final String workflowName, final String templateJobName, final String clonedJobName, final Map<String, String> clonedJobParams, final Map<String, String> clonedJobGroup) throws Exception {
 
 		Job templateJob = (Job) Jenkins.getInstance().getItem(templateJobName);
-		//TemplateWorkflowProperty templateWorkflowProperty = (TemplateWorkflowProperty) job.getProperty(TemplateWorkflowProperty.class);
 		String jobXml = FileUtils.readFileToString(templateJob.getConfigFile().getFile());
 		
 		for (String origJob : clonedJobGroup.keySet()) {
@@ -211,8 +218,8 @@ public class TemplateWorkflowUtil {
 			property.setWorkflowCreatedJob(Boolean.TRUE);
 			property.setWorkflowJobName(workflowJobName);
 			property.setWorkflowName(workflowName);
-			//clonedJob.removeProperty(TemplateWorkflowProperty.class);
-			//TODO: Remove disabled property - put a checkbox in the screen
+
+			//TODO: Remove disabled property - put a checkbox in the screen, only freestyle is enough
 			if(clonedJob instanceof FreeStyleProject){
 				((FreeStyleProject)clonedJob).enable();
 			}

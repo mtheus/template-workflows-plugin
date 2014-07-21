@@ -69,12 +69,17 @@
 						<j:forEach var="relation" items="${it.getJobRelation()}">
 							<tr>
 								<td>
-									<span>${relation.key}</span>
+									<span><a href="${request.getContextPath()+'/job/'+relation.key}">${relation.key}</a></span>
 								</td>
-								<td>
-									<f:textbox name="relatedJob#${relation.key}" value="${relation.value}" />
-									<j:if
-										test="${!empty(it.getErrorMessages('templateInstanceJob.'+instance.instanceName))}">
+								<td>								
+									<f:textbox name="relatedJob#${relation.key}" value="${relation.value}" style="width:200px" />
+									<j:if test="${it.containsJob(relation.value)}">
+										<a href="${request.getContextPath()+'/job/'+relation.value}">
+											<img width="16" height="16" src="${imagesURL}/16x16/search.png" alt="" style="margin-left:5px; margin-right:5px;" />
+										</a>									
+									</j:if>
+									 
+									<j:if test="${!empty(it.getErrorMessages('templateInstanceJob.'+instance.instanceName))}">
 										<j:forEach var="msg"
 											items="${it.getErrorMessages('templateInstanceJob'+instance.instanceName)}">
 											<div class="error">${msg}</div>
@@ -101,7 +106,7 @@
 									<span>${parameter.key}</span>
 								</td>
 								<td>
-									<f:textbox name="parameter#${parameter.key}" value="${parameter.value}" />
+									<f:textbox name="parameter#${parameter.key}" value="${parameter.value}" style="width:99%;"/>
 								</td>
 							</tr>
 						</j:forEach>
@@ -111,7 +116,8 @@
 					<br />
 					
 					<f:submit name="action" value="Save" />
-					<f:submit name="action" value="Delete" />
+					<f:submit name="action" value="Delete Only" />
+					<f:submit name="action" value="Delete Workflow and Jobs" />
 					<input type="submit" name="action" value="FormEvent" id="formevent" style="display: none"/>
 					 
 

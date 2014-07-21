@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.servlet.ServletException;
 
@@ -34,7 +35,8 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 
 	private static final String ACTION_REFRESH = "FormEvent";
 	private static final String ACTION_SAVE = "Save";
-	private static final String ACTION_DELETE = "Delete";
+	private static final String ACTION_DELETE = "Delete Only";
+	private static final String ACTION_DELETE_FULL = "Delete Workflow and Jobs";
 
 	private TemplateWorkflowInstances templateInstances;
 	
@@ -117,7 +119,8 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			if(key.toString().startsWith("relatedJob")){
 				String[] keyArr = key.toString().split("#");
 				String jobKey = keyArr.length == 1 ? null : keyArr[1];
-				jobRelation.put(jobKey, submittedForm.getString(key.toString()));				
+				String value = submittedForm.getString(key.toString());
+				jobRelation.put(jobKey, value == null ? value : value.trim());				
 			}
 			if(key.toString().startsWith("parameter")){
 				String[] keyArr = key.toString().split("#");
@@ -126,11 +129,16 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			}			
 		}
 				
-		if(ACTION_DELETE.equals(postedAction)){
+		if(ACTION_DELETE.equals(postedAction) || ACTION_DELETE_FULL.equals(postedAction)){
 			templateInstances.getInstances().remove(selectedInstance.getInstanceName());
 			if(selectedInstance.getUseExistingJob() != null && !selectedInstance.getUseExistingJob() ){
 				for (Entry<String, String> entry : jobRelation.entrySet()) {
-					TemplateWorkflowUtil.deleteJob(entry.getValue());
+					if(ACTION_DELETE_FULL.equals(postedAction)){
+						TemplateWorkflowUtil.deleteJob(entry.getValue());
+					}
+					if(ACTION_DELETE.equals(postedAction)){
+						TemplateWorkflowUtil.deleteJobProperty(entry.getValue());
+					}
 				}				
 			}
 			finishAndRedirect(req, rsp);
@@ -190,7 +198,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	private void fillJobRelation() {
 
 		List<Job> reletedJob = TemplateWorkflowUtil.getRelatedJobs(templateName);
-		Map<String, String> newJobRelation = new HashMap<String, String>();
+		Map<String, String> newJobRelation = new TreeMap<String, String>();
 		for (Job job : reletedJob) {
 			if(getJobRelation().containsKey(job.getName())){
 				newJobRelation.put(job.getName(), getJobRelation().get(job.getName()));
@@ -207,7 +215,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	private void fillJobParameters() {
 		
 		Map<String, String> reletedProperties = TemplateWorkflowUtil.getTemplateParamaters(templateName);
-		Map<String, String> newJobParameters = new HashMap<String, String>();
+		Map<String, String> newJobParameters = new TreeMap<String, String>();
 		for (Entry<String, String> entry : reletedProperties.entrySet()) {
 			newJobParameters.put(entry.getKey(), getJobParameters().get(entry.getKey()));
 		}		
@@ -248,7 +256,9 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 					if( TemplateWorkflowUtil.notUsesJobName(entry.getValue()) ){
 						addMessage(null, String.format("The name '%s' is been used by another Job.",entry.getValue()));
 					}
-				} catch (Exception e) {}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 			
 			String status = TemplateWorkflowUtil.getJobStatus(entry.getValue());
@@ -277,14 +287,14 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	
 	public Map<String, String> getJobRelation() {
 		if(jobRelation == null){
-			jobRelation = new HashMap<String, String>();
+			jobRelation = new TreeMap<String, String>();
 		}
 		return jobRelation;
 	}
 	
 	public Map<String, String> getJobParameters() {
 		if(jobParameters == null){
-			jobParameters = new HashMap<String, String>();
+			jobParameters = new TreeMap<String, String>();
 		}
 		return jobParameters;
 	}	
@@ -333,6 +343,10 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	@Override
 	public Jenkins getParent() {
 		return Jenkins.getInstance();
+	}
+	
+	public boolean containsJob(String job) {
+		return Jenkins.getInstance().getJobNames().contains(job);
 	}
 
 	public List<String> getErrorMessages() {
