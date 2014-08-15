@@ -158,8 +158,10 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			else {
 				
 				if(selectedInstance.getInstanceName() == null){ // is new
+					//TODO: Validar notUsesWorkflowName(selectedInstance.getInstanceName())
 					selectedInstance.setInstanceName( templateInstanceName );
 				} else if( !selectedInstance.getInstanceName().equals(templateInstanceName)){ // renamed
+					//TODO: Validar notUsesWorkflowName(selectedInstance.getInstanceName())
 					// TODO: check name conflict
 					addMessage(null, "Rename Workflow is not supported yet!");
 					forwardBack(req, rsp);

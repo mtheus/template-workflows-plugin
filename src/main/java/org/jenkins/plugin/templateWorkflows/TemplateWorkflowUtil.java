@@ -174,6 +174,31 @@ public class TemplateWorkflowUtil {
 		
 	}
 	
+	public static boolean notUsesWorkflowName(final String workflowName) throws Exception {
+		
+		boolean used = false;
+		
+		if (StringUtils.isBlank(workflowName)) {
+			throw new Exception("Empty Workflow Name.");
+		}
+		
+		List<TemplatesWorkflowJob> allTemplatesWorkflowJobs = findAllTemplatesWorkflowJobJobs();
+		for (TemplatesWorkflowJob templatesWorkflowJob : allTemplatesWorkflowJobs) {
+			Collection<TemplateWorkflowInstance> templateInstances = templatesWorkflowJob.getTemplateInstances();
+			if(templateInstances != null){
+				for (TemplateWorkflowInstance templateWorkflowInstance : templateInstances) {
+					String instanceWorkflowName = templateWorkflowInstance.getInstanceName();
+					if(StringUtils.equalsIgnoreCase(instanceWorkflowName, workflowName)){
+						used = true;
+					}
+				}
+			}
+		}
+		
+		return used;
+		
+	}
+	
 	public static List<Job> findAllWorkflowsInstancesJobs() {
 		List<Job> result = new ArrayList<Job>();
 		List<Item> allItems = Jenkins.getInstance().getAllItems();
