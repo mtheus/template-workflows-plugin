@@ -9,22 +9,18 @@ import org.kohsuke.stapler.export.ExportedBean;
 @ExportedBean
 public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInstance> {
 
-	// mark if the job was create during the template definition - for delete logic
-	private Map<String, Boolean> isNewJobMap;
 	private String instanceName;
 	private String templateName;
 	private Map<String, String> jobParameters;
 	private Map<String, String> relatedJobs;
-	private Boolean useTemplatePrefix;
-	private Boolean useExistingJob;	
+	private Boolean useTemplatePrefix;	
 
 	public TemplateWorkflowInstance() {
 	}
 	
-	public TemplateWorkflowInstance(final String templateName, final String instanceName, final Map<String, Boolean> isNewJobMap) {
+	public TemplateWorkflowInstance(final String templateName, final String instanceName) {
 		this.templateName = templateName;
 		this.instanceName = instanceName;
-		this.isNewJobMap = isNewJobMap;
 		this.jobParameters = new HashMap<String, String>();
 		this.relatedJobs = new HashMap<String, String>();
 	}
@@ -55,11 +51,6 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 		return this.jobParameters;
 	}
 
-	@Exported
-	public boolean isJobWasCreateByWorkflow(final String jobName) {
-		return this.isNewJobMap.get(jobName);
-	}
-
 	public void setInstanceName(String instanceName) {
 		this.instanceName = instanceName;
 	}
@@ -86,14 +77,6 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 
 	public void setUseTemplatePrefix(Boolean useTemplatePrefix) {
 		this.useTemplatePrefix = useTemplatePrefix;
-	}
-
-	public Boolean getUseExistingJob() {
-		return useExistingJob;
-	}
-
-	public void setUseExistingJob(Boolean useExistingJob) {
-		this.useExistingJob = useExistingJob;
 	}
 	
 }

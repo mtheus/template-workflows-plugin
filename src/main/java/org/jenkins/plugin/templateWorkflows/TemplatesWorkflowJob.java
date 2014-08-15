@@ -43,7 +43,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	private String templateName;
 	private String templateInstanceName;
 	private Boolean useTemplatePrefix;
-	private Boolean useExistingJob;	
+	private Boolean overwriteExistingJob;	
 	private Map<String, String> jobParameters;
 	private Map<String, String> jobRelation;
 	
@@ -79,10 +79,10 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			
 			this.templateInstanceName = selectedInstance.getInstanceName();
 			this.templateName = selectedInstance.getTemplateName();
-			this.useExistingJob = selectedInstance.getUseExistingJob();
 			this.useTemplatePrefix = selectedInstance.getUseTemplatePrefix();
 			this.jobParameters =  selectedInstance.getJobParameters();
 			this.jobRelation = selectedInstance.getRelatedJobs();
+			this.overwriteExistingJob = Boolean.FALSE;
 			fillJobRelation();
 			fillJobParameters();
 		}
@@ -105,14 +105,15 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		JSONObject submittedForm = req.getSubmittedForm();
 		templateName = submittedForm.getString("templateName");
 		templateInstanceName = submittedForm.getString("templateInstanceName");
-		useTemplatePrefix = submittedForm.getBoolean("useTemplatePrefix");
-		useExistingJob = submittedForm.getBoolean("useExistingJob");
 		
+		useTemplatePrefix = submittedForm.getBoolean("useTemplatePrefix");		
 		if( useTemplatePrefix == null ){
 			useTemplatePrefix = Boolean.TRUE;
 		}
-		if( useTemplatePrefix == null ){
-			useExistingJob = Boolean.FALSE;
+		
+		overwriteExistingJob = submittedForm.getBoolean("overwriteExistingJob");
+		if( overwriteExistingJob == null ){
+			overwriteExistingJob = Boolean.FALSE;
 		}
 		
 		for (Object key : submittedForm.keySet()) {
@@ -131,16 +132,14 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				
 		if(ACTION_DELETE.equals(postedAction) || ACTION_DELETE_FULL.equals(postedAction)){
 			templateInstances.getInstances().remove(selectedInstance.getInstanceName());
-			if(selectedInstance.getUseExistingJob() != null && !selectedInstance.getUseExistingJob() ){
-				for (Entry<String, String> entry : jobRelation.entrySet()) {
-					if(ACTION_DELETE_FULL.equals(postedAction)){
-						TemplateWorkflowUtil.deleteJob(entry.getValue());
-					}
-					if(ACTION_DELETE.equals(postedAction)){
-						TemplateWorkflowUtil.deleteJobProperty(entry.getValue());
-					}
-				}				
-			}
+			for (Entry<String, String> entry : jobRelation.entrySet()) {
+				if(ACTION_DELETE_FULL.equals(postedAction)){
+					TemplateWorkflowUtil.deleteJob(entry.getValue());
+				}
+				if(ACTION_DELETE.equals(postedAction)){
+					TemplateWorkflowUtil.deleteJobProperty(entry.getValue());
+				}
+			}				
 			finishAndRedirect(req, rsp);
 		}
 		else if(ACTION_REFRESH.equals(postedAction)){
@@ -168,7 +167,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				}
 				
 				selectedInstance.setTemplateName(templateName);
-				selectedInstance.setUseExistingJob(useExistingJob);
 				selectedInstance.setUseTemplatePrefix(useTemplatePrefix);
 				selectedInstance.setJobParameters(jobParameters);
 				selectedInstance.setRelatedJobs(jobRelation);
@@ -242,6 +240,12 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			return;
 		}
 		
+		this.templateName = StringUtils.trimToEmpty(templateName);
+		if(StringUtils.isEmpty(templateName)){
+			addMessage("templateName", "Template Name is required");
+			return;
+		}
+		
 		for (Entry<String, String> entry : jobRelation.entrySet()) {
 			
 			if(StringUtils.isEmpty(entry.getValue())){
@@ -249,10 +253,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				continue;
 			}
 			
-			if(useExistingJob){
-				// alow exisiting job
-				//TODO: check for properties?
-			} else {
+			if(!overwriteExistingJob){
 				try {
 					if( TemplateWorkflowUtil.notUsesJobName(entry.getValue()) ){
 						addMessage(null, String.format("The name '%s' is been used by another Job.",entry.getValue()));
@@ -280,7 +281,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		this.templateInstanceName = null;
 		this.templateName = null;		
 		this.useTemplatePrefix = Boolean.TRUE;
-		this.useExistingJob = Boolean.FALSE;	
+		this.overwriteExistingJob = Boolean.FALSE;	
 		this.jobParameters = null;
 		this.jobRelation = null;
 		
@@ -312,8 +313,8 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		return useTemplatePrefix;
 	}
 
-	public Boolean getUseExistingJob() {
-		return useExistingJob;
+	public Boolean getOverwriteExistingJob() {
+		return overwriteExistingJob;
 	}
 
 	public Set<String> getAllWorkflowTemplateNames() {
