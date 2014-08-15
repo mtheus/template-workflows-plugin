@@ -178,11 +178,12 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				}
 				
 				templateInstances.getInstances().put(selectedInstance.getInstanceName(), selectedInstance);
+				String workflowName = selectedInstance.getInstanceName();
 				
 				// do the magic				
-				for (Entry<String, String> entry : jobRelation.entrySet()) {
-					TemplateWorkflowUtil.createOrUpdate(this.getName(), selectedInstance.getInstanceName(), 
-							entry.getKey(), entry.getValue(), 
+				for (Entry<String, String> relatedJobEntry : jobRelation.entrySet()) {
+					TemplateWorkflowUtil.createOrUpdate(this.getName(), workflowName, 
+							relatedJobEntry.getKey(), relatedJobEntry.getValue(), 
 							jobParameters, jobRelation);					
 				}
 				

@@ -188,6 +188,20 @@ public class TemplateWorkflowUtil {
 		}		
 		return result;		
 	}
+
+	public static List<TemplatesWorkflowJob> findAllTemplatesWorkflowJobJobs() {
+		List<TemplatesWorkflowJob> result = new ArrayList<TemplatesWorkflowJob>();
+		List<Item> allItems = Jenkins.getInstance().getAllItems();
+		for (Item i : allItems) {
+			Collection<? extends Job> allJobs = i.getAllJobs();
+			for (Job j : allJobs) {
+				if(j instanceof TemplatesWorkflowJob){
+					result.add((TemplatesWorkflowJob)j);					
+				}
+			}
+		}		
+		return result;		
+	}	
 	
 	public static boolean createOrUpdate(final String workflowJobName, final String workflowName, final String templateJobName, final String clonedJobName, final Map<String, String> clonedJobParams, final Map<String, String> clonedJobGroup) throws Exception {
 
