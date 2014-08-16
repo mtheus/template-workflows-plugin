@@ -16,7 +16,7 @@ public class TemplateWorkflowProperty extends JobProperty<AbstractProject<?, ?>>
 	private boolean isWorkflowCreatedJob;
 	private String workflowJobName;
 	private String workflowName;
-	
+
 	public boolean isWorkflowCreatedJob() {
 		return isWorkflowCreatedJob;
 	}
@@ -27,8 +27,8 @@ public class TemplateWorkflowProperty extends JobProperty<AbstractProject<?, ?>>
 
 	public void setTemplateName(String templateName) {
 		this.templateName = templateName;
-	}	
-	
+	}
+
 	public String getWorkflowJobName() {
 		return workflowJobName;
 	}
@@ -47,19 +47,21 @@ public class TemplateWorkflowProperty extends JobProperty<AbstractProject<?, ?>>
 
 	public String getFullWorkFlowJobName() {
 		return Jenkins.getInstance().getRootUrl() + "job/" + workflowJobName;
-	}	
+	}
+	public String getTemplateName() {
+		return templateName;
+	}
+
+	public TemplateWorkflowProperty() {
+	}
 
 	@DataBoundConstructor
-	public TemplateWorkflowProperty(String templateName, boolean isWorkflowCreatedJob, 
-			String workflowJobName, String workflowName) {		
+	public TemplateWorkflowProperty(String templateName, boolean isWorkflowCreatedJob,
+			String workflowJobName, String workflowName) {
 		this.templateName = templateName;
 		this.isWorkflowCreatedJob = isWorkflowCreatedJob;
 		this.workflowJobName = workflowJobName;
 		this.workflowName = workflowName;
-	}
-
-	public String getTemplateName() {
-		return templateName;
 	}
 
 	@Extension

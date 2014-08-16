@@ -1,16 +1,20 @@
 package org.jenkins.plugin.templateWorkflows;
 
-import java.util.List;
-import java.util.Map;
-
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.fillJobRelation;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.findTemplateWorkflowInstanceRelatedWtihTemplateName;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.getTemplateWorkflowProperty;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.itIsATemplateJob;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.mekeWorkflowJobsConsistent;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.updateTemplateWorkflowInstance;
 import hudson.Extension;
 import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.listeners.ItemListener;
 
-import com.google.common.base.Throwables;
+import java.util.List;
+import java.util.Map;
 
-import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.*;
+import com.google.common.base.Throwables;
 
 /**
  * React to changes being made on template projects
@@ -20,7 +24,7 @@ import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.*;
 public class TemplateWorkflowItemListener extends ItemListener {
 
 	@Override
-	public void onCreated(Item item) {		
+	public void onCreated(Item item) {
 		//if(true)return; /*teste*/
 		updateTemplateInstanceMetadata(item);
 	}
@@ -30,7 +34,7 @@ public class TemplateWorkflowItemListener extends ItemListener {
 		//if(true)return; /*teste*/
 		updateTemplateInstanceMetadata(item);
 	}
-	
+
 	@Override
 	public void onDeleted(Item item) {
 		//if(true)return; /*teste*/
@@ -42,7 +46,7 @@ public class TemplateWorkflowItemListener extends ItemListener {
 		//if(true)return; /*teste*/
 		updateTemplateInstanceMetadata(item);
 	}
-	
+
 	private void updateTemplateInstanceMetadata(Item item) {
 		Job job = getProject(item);
 		if(job == null){
@@ -50,10 +54,10 @@ public class TemplateWorkflowItemListener extends ItemListener {
 		}
 
 		if (itIsATemplateJob(job)){
-			
+
 			TemplateWorkflowProperty templateWorkflowProperty = getTemplateWorkflowProperty(job);
-			List<TemplateWorkflowInstance> instances = findTemplateWorkflowInstanceRelatedWtihTemplateName(templateWorkflowProperty.getTemplateName());			
-			for (TemplateWorkflowInstance templateWorkflowInstance : instances) {				
+			List<TemplateWorkflowInstance> instances = findTemplateWorkflowInstanceRelatedWtihTemplateName(templateWorkflowProperty.getTemplateName());
+			for (TemplateWorkflowInstance templateWorkflowInstance : instances) {
 				Map<String, String> jobRealation = fillJobRelation(templateWorkflowInstance);
 				templateWorkflowInstance.setRelatedJobs(jobRealation);
 			}
@@ -62,13 +66,13 @@ public class TemplateWorkflowItemListener extends ItemListener {
 	}
 
 	private void completeUpdate(List<TemplateWorkflowInstance> instances) {
-		
+
 		try {
 			updateTemplateWorkflowInstance(instances);
 		} catch (Exception e) {
 			//TODO: check if this is right way
 			throw Throwables.propagate(e);
-		}			
+		}
 
 		try {
 			mekeWorkflowJobsConsistent();
@@ -80,9 +84,9 @@ public class TemplateWorkflowItemListener extends ItemListener {
 
 	private static Job getProject(Item item) {
 		if (item instanceof Job) {
-			return (Job) item;			
+			return (Job) item;
 		}
-		return null;		
+		return null;
 	}
 
 }

@@ -6,6 +6,8 @@ import java.util.Map;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
+import com.google.common.collect.Maps;
+
 @ExportedBean
 public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInstance> {
 
@@ -14,17 +16,32 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 	private String workFlowOwner;
 	private Map<String, String> jobParameters;
 	private Map<String, String> relatedJobs;
-	private Boolean useTemplatePrefix;	
+	private Boolean useTemplatePrefix;
 
 	public TemplateWorkflowInstance() {
+		this.jobParameters = new HashMap<String, String>();
+		this.relatedJobs = new HashMap<String, String>();
+		this.useTemplatePrefix = Boolean.TRUE;
 	}
-	
+
 	public TemplateWorkflowInstance(final String templateName, final String instanceName, final String workFlowOwner) {
 		this.templateName = templateName;
 		this.instanceName = instanceName;
 		this.workFlowOwner = workFlowOwner;
 		this.jobParameters = new HashMap<String, String>();
 		this.relatedJobs = new HashMap<String, String>();
+		this.useTemplatePrefix = Boolean.TRUE;
+	}
+
+	public TemplateWorkflowInstance clone(){
+		TemplateWorkflowInstance clone = new TemplateWorkflowInstance();
+		clone.templateName = this.templateName;
+		clone.instanceName = this.instanceName;
+		clone.workFlowOwner = this.workFlowOwner;
+		clone.jobParameters = Maps.newHashMap(this.jobParameters);
+		clone.relatedJobs =  Maps.newHashMap(this.relatedJobs);
+		clone.useTemplatePrefix = this.useTemplatePrefix;
+		return clone;
 	}
 
 	@Exported
@@ -44,7 +61,9 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 
 	@Exported
 	public int getRelatedJobsSize() {
-		if( this.relatedJobs == null ) return 0;
+		if( this.relatedJobs == null ) {
+			return 0;
+		}
 		return this.relatedJobs.size();
 	}
 
@@ -73,11 +92,11 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 	public void setRelatedJobs(Map<String, String> relatedJobs) {
 		this.relatedJobs = relatedJobs;
 	}
-	
+
 	public void setWorkFlowOwner(String workFlowOwner) {
 		this.workFlowOwner = workFlowOwner;
 	}
-	
+
 	public Boolean getUseTemplatePrefix() {
 		return useTemplatePrefix;
 	}
@@ -85,9 +104,9 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 	public void setUseTemplatePrefix(Boolean useTemplatePrefix) {
 		this.useTemplatePrefix = useTemplatePrefix;
 	}
-	
+
 	public int compareTo(final TemplateWorkflowInstance o) {
 		return this.instanceName.compareTo(o.instanceName);
 	}
-	
+
 }

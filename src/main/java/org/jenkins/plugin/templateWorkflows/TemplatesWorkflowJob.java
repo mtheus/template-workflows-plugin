@@ -1,12 +1,17 @@
 package org.jenkins.plugin.templateWorkflows;
 
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.deleteJob;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.deleteJobProperty;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.getJobStatus;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.mekeWorkflowJobsConsistent;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.notUsesJobName;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.validateJobStatus;
 import hudson.Extension;
 import hudson.model.ItemGroup;
 import hudson.model.TopLevelItem;
 import hudson.model.TopLevelItemDescriptor;
 import hudson.model.ViewJob;
 import hudson.model.AbstractProject.AbstractProjectDescriptor;
-import hudson.model.Job;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,8 +36,6 @@ import org.kohsuke.stapler.bind.JavaScriptMethod;
 
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
-import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.*;
-
 public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, TemplateswWorkflowRun> implements TopLevelItem {
 
 	private static final String ACTION_REFRESH = "FormEvent";
@@ -41,19 +44,16 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	private static final String ACTION_DELETE_FULL = "Delete Workflow and Jobs";
 
 	private TemplateWorkflowInstances templateInstances;
-	
+
 	private String templateName;
 	private String templateInstanceName;
 	private Boolean useTemplatePrefix;
-	private Boolean overwriteExistingJob;	
+	private Boolean overwriteExistingJob;
 	private Map<String, String> jobParameters;
 	private Map<String, String> jobRelation;
-	
+
 	private TemplateWorkflowInstance selectedInstance;
-	
-	@SuppressWarnings("rawtypes")
-	@Deprecated 
-	private static List<Job> relatedJobs;
+
 	@XStreamOmitField
 	private Map<String, List<String>> errorMessages;
 	@XStreamOmitField
@@ -61,23 +61,19 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 
 	public TemplatesWorkflowJob(final ItemGroup<TopLevelItem> itemGroup, final String name) {
 		super(itemGroup, name);
-		// TODO: create a compatibility code
-		if(relatedJobs != null){
-			relatedJobs.clear();
-		}
 	}
-	
+
 	@JavaScriptMethod
 	public JSONObject selectInstance(final String instanceName) {
-		
+
 		cleanFields();
-		
+
 		if(instanceName == null ||  !getSafeTemplateInstances().getInstances().containsKey(instanceName)){
-			this.selectedInstance = new TemplateWorkflowInstance();			
+			this.selectedInstance = new TemplateWorkflowInstance();
 		}
-		else {			
-			this.selectedInstance = getSafeTemplateInstances().getInstances().get(instanceName);
-			
+		else {
+			this.selectedInstance = getSafeTemplateInstances().getInstances().get(instanceName).clone();
+
 			this.templateInstanceName = selectedInstance.getInstanceName();
 			this.templateName = selectedInstance.getTemplateName();
 			this.useTemplatePrefix = selectedInstance.getUseTemplatePrefix();
@@ -87,17 +83,17 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			fillJobRelation();
 			fillJobParameters();
 		}
-		
+
 		return new JSONObject();
 	}
 
 
 	public synchronized void doConfigWorkflow(StaplerRequest req, StaplerResponse rsp) throws Exception {
 
-		//TODO: There are some security issues? 
-		
+		//TODO: There are some security issues?
+
 		getErrorMap().clear();
-		
+
 		String postedAction = req.getParameter("action");
 		if(null == postedAction){
 			postedAction = ACTION_REFRESH;
@@ -106,31 +102,31 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		JSONObject submittedForm = req.getSubmittedForm();
 		templateName = submittedForm.getString("templateName");
 		templateInstanceName = submittedForm.getString("templateInstanceName");
-		
-		useTemplatePrefix = submittedForm.getBoolean("useTemplatePrefix");		
+
+		useTemplatePrefix = submittedForm.getBoolean("useTemplatePrefix");
 		if( useTemplatePrefix == null ){
 			useTemplatePrefix = Boolean.TRUE;
 		}
-		
+
 		overwriteExistingJob = submittedForm.getBoolean("overwriteExistingJob");
 		if( overwriteExistingJob == null ){
 			overwriteExistingJob = Boolean.FALSE;
 		}
-		
+
 		for (Object key : submittedForm.keySet()) {
 			if(key.toString().startsWith("relatedJob")){
 				String[] keyArr = key.toString().split("#");
 				String jobKey = keyArr.length == 1 ? null : keyArr[1];
 				String value = submittedForm.getString(key.toString());
-				jobRelation.put(jobKey, value == null ? value : value.trim());				
+				jobRelation.put(jobKey, value == null ? value : value.trim());
 			}
 			if(key.toString().startsWith("parameter")){
 				String[] keyArr = key.toString().split("#");
 				String jobKey = keyArr.length == 1 ? null : keyArr[1];
-				jobParameters.put(jobKey, submittedForm.getString(key.toString()));				
-			}			
+				jobParameters.put(jobKey, submittedForm.getString(key.toString()));
+			}
 		}
-				
+
 		if(ACTION_DELETE.equals(postedAction) || ACTION_DELETE_FULL.equals(postedAction)){
 			getSafeTemplateInstances().getInstances().remove(selectedInstance.getInstanceName());
 			for (Entry<String, String> entry : jobRelation.entrySet()) {
@@ -141,24 +137,30 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				if(ACTION_DELETE.equals(postedAction)){
 					deleteJobProperty(entry.getValue());
 				}
-			}				
+			}
 			finishAndRedirect(req, rsp);
 		}
 		else if(ACTION_REFRESH.equals(postedAction)){
-			
+
+			//TODO: Validar notUsesWorkflowName(selectedInstance.getInstanceName())
+			selectedInstance.setInstanceName( templateInstanceName );
+			selectedInstance.setTemplateName(templateName);
+			selectedInstance.setUseTemplatePrefix(useTemplatePrefix);
+			selectedInstance.setWorkFlowOwner(this.getName());
+
 			fillJobRelation();
 			fillJobParameters();
 			forwardBack(req, rsp);
 		}
 		else if(ACTION_SAVE.equals(postedAction)){
-			
+
 			validateForm(submittedForm);
-			
+
 			if(!getErrorMap().isEmpty()){
 				forwardBack(req, rsp);
 			}
 			else {
-				
+
 				if(selectedInstance.getInstanceName() == null){ // is new
 					//TODO: Validar notUsesWorkflowName(selectedInstance.getInstanceName())
 					selectedInstance.setInstanceName( templateInstanceName );
@@ -169,30 +171,30 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 					forwardBack(req, rsp);
 					return;
 				}
-				
+
 				selectedInstance.setTemplateName(templateName);
 				selectedInstance.setUseTemplatePrefix(useTemplatePrefix);
+				selectedInstance.setWorkFlowOwner(this.getName());
 				selectedInstance.setJobParameters(jobParameters);
 				selectedInstance.setRelatedJobs(jobRelation);
-				selectedInstance.setWorkFlowOwner(this.getName());
-				
+
 				getSafeTemplateInstances().getInstances().put(selectedInstance.getInstanceName(), selectedInstance);
 
 				mekeWorkflowJobsConsistent();
-				
+
 				finishAndRedirect(req, rsp);
 			}
-			
+
 		}
 
 	}
-	
+
 	private void fillJobRelation() {
-		jobRelation = TemplateWorkflowUtil.fillJobRelation(selectedInstance);		
+		jobRelation = TemplateWorkflowUtil.fillJobRelation(selectedInstance);
 	}
-	
+
 	private void fillJobParameters() {
-		jobParameters = TemplateWorkflowUtil.fillJobRelation(selectedInstance);		
+		jobParameters = TemplateWorkflowUtil.fillJobParameters(selectedInstance);
 	}
 
 	private void forwardBack(StaplerRequest req, StaplerResponse rsp) throws ServletException, IOException {
@@ -204,28 +206,28 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		this.save();
 		rsp.sendRedirect2(req.getContextPath() + "/job/" + getName());
 	}
-	
+
 	private void validateForm(JSONObject submittedForm){
-				 		
+
 		this.templateInstanceName = StringUtils.trimToEmpty(templateInstanceName);
 		if(StringUtils.isEmpty(templateInstanceName)){
 			addMessage("templateInstanceName", "Workflow Name is required");
 			return;
 		}
-		
+
 		this.templateName = StringUtils.trimToEmpty(templateName);
 		if(StringUtils.isEmpty(templateName)){
 			addMessage("templateName", "Template Name is required");
 			return;
 		}
-		
+
 		for (Entry<String, String> entry : jobRelation.entrySet()) {
-			
+
 			if(StringUtils.isEmpty(entry.getValue())){
 				addMessage(null, String.format("We need a not used name to clone the Job '%s'.",entry.getKey()));
 				continue;
 			}
-			
+
 			if(!overwriteExistingJob){
 				try {
 					if( notUsesJobName(entry.getValue()) ){
@@ -235,7 +237,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 					e.printStackTrace();
 				}
 			}
-			
+
 			String status = getJobStatus(entry.getValue());
 			if(status != null){
 				addMessage(null, String.format("There are required Job '%s' with status %s.", entry.getValue(), status));
@@ -244,35 +246,35 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			if(status != null){
 				addMessage(null, String.format("There are required Job '%s' with status %s.", entry.getKey(), status));
 			}
-			
+
 		}
-		
+
 	}
-	
+
 	private void cleanFields() {
 		getErrorMap().clear();
 		this.templateInstanceName = null;
-		this.templateName = null;		
+		this.templateName = null;
 		this.useTemplatePrefix = Boolean.TRUE;
-		this.overwriteExistingJob = Boolean.FALSE;	
+		this.overwriteExistingJob = Boolean.FALSE;
 		this.jobParameters = null;
 		this.jobRelation = null;
-		
+
 	}
-	
+
 	public Map<String, String> getJobRelation() {
 		if(jobRelation == null){
 			jobRelation = new TreeMap<String, String>();
 		}
 		return jobRelation;
 	}
-	
+
 	public Map<String, String> getJobParameters() {
 		if(jobParameters == null){
 			jobParameters = new TreeMap<String, String>();
 		}
 		return jobParameters;
-	}	
+	}
 
 	public String getTemplateName() {
 		return this.templateName;
@@ -291,9 +293,9 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	}
 
 	public Set<String> getAllWorkflowTemplateNames() {
-		return getAllWorkflowTemplateNames();
+		return TemplateWorkflowUtil.getAllWorkflowTemplateNames();
 	}
-	
+
 	public Collection<TemplateWorkflowInstance> getTemplateInstances() {
 		ArrayList<TemplateWorkflowInstance> all = null;
 		all = new ArrayList<TemplateWorkflowInstance>(getSafeTemplateInstances().values());
@@ -305,14 +307,14 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		if (getSafeTemplateInstances().getInstances().size() == 0) {
 			return "This Project does not have any Associated Workflows";
 		}
-		return String.format("This Project has %d Associated Workflows", getSafeTemplateInstances().getInstances().size()); 
+		return String.format("This Project has %d Associated Workflows", getSafeTemplateInstances().getInstances().size());
 	}
 
 	@Override
 	public Jenkins getParent() {
 		return Jenkins.getInstance();
 	}
-	
+
 	public boolean containsJob(String job) {
 		return Jenkins.getInstance().getJobNames().contains(job);
 	}
@@ -320,7 +322,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	public List<String> getErrorMessages() {
 		return getErrorMessages(null);
 	}
-	
+
 	public List<String> getErrorMessages(String fieldId) {
 		getErrorMap();
 		if(!errorMessages.containsKey(fieldId)){
@@ -335,9 +337,9 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		}
 		return errorMessages;
 	}
-	
+
 	private void addMessage(String fieldId, String message){
-		List<String> messageList; 
+		List<String> messageList;
 		if(!errorMessages.containsKey(fieldId)){
 			messageList = new ArrayList<String>();
 			errorMessages.put(fieldId, messageList);
@@ -346,8 +348,8 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			messageList = errorMessages.get(fieldId);
 		}
 		messageList.add(message);
-	}	
-	
+	}
+
 	public TopLevelItemDescriptor getDescriptor() {
 		return new DescriptorImpl(this);
 	}
@@ -383,7 +385,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		}
 
 	}
-	
+
 	public TemplateWorkflowInstances getSafeTemplateInstances() {
 		if(templateInstances == null){
 			templateInstances = new TemplateWorkflowInstances();
@@ -394,5 +396,5 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	@Override
 	protected void reload() {
 	};
-	
+
 }
