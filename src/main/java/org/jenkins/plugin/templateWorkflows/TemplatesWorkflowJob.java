@@ -31,6 +31,8 @@ import org.kohsuke.stapler.bind.JavaScriptMethod;
 
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.*;
+
 public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, TemplateswWorkflowRun> implements TopLevelItem {
 
 	private static final String ACTION_REFRESH = "FormEvent";
@@ -70,12 +72,11 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		
 		cleanFields();
 		
-		if(instanceName == null || templateInstances == null || templateInstances.getInstances() == null
-				|| !templateInstances.getInstances().containsKey(instanceName)){
+		if(instanceName == null ||  !getSafeTemplateInstances().getInstances().containsKey(instanceName)){
 			this.selectedInstance = new TemplateWorkflowInstance();			
 		}
 		else {			
-			this.selectedInstance = templateInstances.getInstances().get(instanceName);
+			this.selectedInstance = getSafeTemplateInstances().getInstances().get(instanceName);
 			
 			this.templateInstanceName = selectedInstance.getInstanceName();
 			this.templateName = selectedInstance.getTemplateName();
@@ -131,13 +132,14 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		}
 				
 		if(ACTION_DELETE.equals(postedAction) || ACTION_DELETE_FULL.equals(postedAction)){
-			templateInstances.getInstances().remove(selectedInstance.getInstanceName());
+			getSafeTemplateInstances().getInstances().remove(selectedInstance.getInstanceName());
 			for (Entry<String, String> entry : jobRelation.entrySet()) {
+				validateJobStatus(entry.getValue());
 				if(ACTION_DELETE_FULL.equals(postedAction)){
-					TemplateWorkflowUtil.deleteJob(entry.getValue());
+					deleteJob(entry.getValue());
 				}
 				if(ACTION_DELETE.equals(postedAction)){
-					TemplateWorkflowUtil.deleteJobProperty(entry.getValue());
+					deleteJobProperty(entry.getValue());
 				}
 			}				
 			finishAndRedirect(req, rsp);
@@ -172,20 +174,11 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				selectedInstance.setUseTemplatePrefix(useTemplatePrefix);
 				selectedInstance.setJobParameters(jobParameters);
 				selectedInstance.setRelatedJobs(jobRelation);
+				selectedInstance.setWorkFlowOwner(this.getName());
 				
-				if(templateInstances == null){
-					templateInstances = new TemplateWorkflowInstances();
-				}
-				
-				templateInstances.getInstances().put(selectedInstance.getInstanceName(), selectedInstance);
-				String workflowName = selectedInstance.getInstanceName();
-				
-				// do the magic				
-				for (Entry<String, String> relatedJobEntry : jobRelation.entrySet()) {
-					TemplateWorkflowUtil.createOrUpdate(this.getName(), workflowName, 
-							relatedJobEntry.getKey(), relatedJobEntry.getValue(), 
-							jobParameters, jobRelation);					
-				}
+				getSafeTemplateInstances().getInstances().put(selectedInstance.getInstanceName(), selectedInstance);
+
+				mekeWorkflowJobsConsistent();
 				
 				finishAndRedirect(req, rsp);
 			}
@@ -193,35 +186,13 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		}
 
 	}
-
 	
-	@SuppressWarnings("rawtypes")
 	private void fillJobRelation() {
-
-		List<Job> reletedJob = TemplateWorkflowUtil.getRelatedJobs(templateName);
-		Map<String, String> newJobRelation = new TreeMap<String, String>();
-		for (Job job : reletedJob) {
-			if(getJobRelation().containsKey(job.getName())){
-				newJobRelation.put(job.getName(), getJobRelation().get(job.getName()));
-			} else if(useTemplatePrefix != null && useTemplatePrefix){
-				newJobRelation.put(job.getName(), templateInstanceName + "-" + job.getName());
-			} else {
-				newJobRelation.put(job.getName(), null);				
-			}
-		}
-		jobRelation = newJobRelation;
-		
+		jobRelation = TemplateWorkflowUtil.fillJobRelation(selectedInstance);		
 	}
 	
 	private void fillJobParameters() {
-		
-		Map<String, String> reletedProperties = TemplateWorkflowUtil.getTemplateParamaters(templateName);
-		Map<String, String> newJobParameters = new TreeMap<String, String>();
-		for (Entry<String, String> entry : reletedProperties.entrySet()) {
-			newJobParameters.put(entry.getKey(), getJobParameters().get(entry.getKey()));
-		}		
-		jobParameters = newJobParameters;
-		
+		jobParameters = TemplateWorkflowUtil.fillJobRelation(selectedInstance);		
 	}
 
 	private void forwardBack(StaplerRequest req, StaplerResponse rsp) throws ServletException, IOException {
@@ -257,7 +228,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			
 			if(!overwriteExistingJob){
 				try {
-					if( TemplateWorkflowUtil.notUsesJobName(entry.getValue()) ){
+					if( notUsesJobName(entry.getValue()) ){
 						addMessage(null, String.format("The name '%s' is been used by another Job.",entry.getValue()));
 					}
 				} catch (Exception e) {
@@ -265,11 +236,11 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				}
 			}
 			
-			String status = TemplateWorkflowUtil.getJobStatus(entry.getValue());
+			String status = getJobStatus(entry.getValue());
 			if(status != null){
 				addMessage(null, String.format("There are required Job '%s' with status %s.", entry.getValue(), status));
 			}
-			status = TemplateWorkflowUtil.getJobStatus(entry.getKey());
+			status = getJobStatus(entry.getKey());
 			if(status != null){
 				addMessage(null, String.format("There are required Job '%s' with status %s.", entry.getKey(), status));
 			}
@@ -320,28 +291,21 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	}
 
 	public Set<String> getAllWorkflowTemplateNames() {
-		return TemplateWorkflowUtil.getAllWorkflowTemplateNames();
+		return getAllWorkflowTemplateNames();
 	}
 	
 	public Collection<TemplateWorkflowInstance> getTemplateInstances() {
-
 		ArrayList<TemplateWorkflowInstance> all = null;
-
-		if (this.templateInstances == null) {
-			all = new ArrayList<TemplateWorkflowInstance>();
-		}
-
-		all = new ArrayList<TemplateWorkflowInstance>(this.templateInstances.values());
+		all = new ArrayList<TemplateWorkflowInstance>(getSafeTemplateInstances().values());
 		Collections.sort(all);
-
 		return all;
 	}
 
 	public String getProjectDesc() {
-		if (this.templateInstances == null || this.templateInstances.getInstances() == null || this.templateInstances.getInstances().size() == 0) {
+		if (getSafeTemplateInstances().getInstances().size() == 0) {
 			return "This Project does not have any Associated Workflows";
 		}
-		return "This Project has " + this.templateInstances.getInstances().size() + " Associated Workflows";
+		return String.format("This Project has %d Associated Workflows", getSafeTemplateInstances().getInstances().size()); 
 	}
 
 	@Override
@@ -418,6 +382,13 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			return new TemplatesWorkflowJob(Jenkins.getInstance(), paramString);
 		}
 
+	}
+	
+	public TemplateWorkflowInstances getSafeTemplateInstances() {
+		if(templateInstances == null){
+			templateInstances = new TemplateWorkflowInstances();
+		}
+		return templateInstances;
 	}
 
 	@Override

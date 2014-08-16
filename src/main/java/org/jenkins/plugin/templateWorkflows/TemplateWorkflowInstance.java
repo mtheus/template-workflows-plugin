@@ -11,6 +11,7 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 
 	private String instanceName;
 	private String templateName;
+	private String workFlowOwner;
 	private Map<String, String> jobParameters;
 	private Map<String, String> relatedJobs;
 	private Boolean useTemplatePrefix;	
@@ -18,9 +19,10 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 	public TemplateWorkflowInstance() {
 	}
 	
-	public TemplateWorkflowInstance(final String templateName, final String instanceName) {
+	public TemplateWorkflowInstance(final String templateName, final String instanceName, final String workFlowOwner) {
 		this.templateName = templateName;
 		this.instanceName = instanceName;
+		this.workFlowOwner = workFlowOwner;
 		this.jobParameters = new HashMap<String, String>();
 		this.relatedJobs = new HashMap<String, String>();
 	}
@@ -33,6 +35,11 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 	@Exported
 	public String getTemplateName() {
 		return this.templateName;
+	}
+
+	@Exported
+	public String getWorkFlowOwner() {
+		return workFlowOwner;
 	}
 
 	@Exported
@@ -66,17 +73,21 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 	public void setRelatedJobs(Map<String, String> relatedJobs) {
 		this.relatedJobs = relatedJobs;
 	}
-
-	public int compareTo(final TemplateWorkflowInstance o) {
-		return this.instanceName.compareTo(o.instanceName);
+	
+	public void setWorkFlowOwner(String workFlowOwner) {
+		this.workFlowOwner = workFlowOwner;
 	}
-
+	
 	public Boolean getUseTemplatePrefix() {
 		return useTemplatePrefix;
 	}
 
 	public void setUseTemplatePrefix(Boolean useTemplatePrefix) {
 		this.useTemplatePrefix = useTemplatePrefix;
+	}
+	
+	public int compareTo(final TemplateWorkflowInstance o) {
+		return this.instanceName.compareTo(o.instanceName);
 	}
 	
 }

@@ -13,18 +13,9 @@ import org.kohsuke.stapler.StaplerRequest;
 public class TemplateWorkflowProperty extends JobProperty<AbstractProject<?, ?>> {
 
 	private String templateName;
-	@Deprecated	private boolean isStartingWorkflowJob;
 	private boolean isWorkflowCreatedJob;
 	private String workflowJobName;
 	private String workflowName;
-
-	public boolean getIsStartingWorkflowJob() {
-		return isStartingWorkflowJob;
-	}
-
-	public void setStartingWorkflowJob(boolean isStartingWorkflowJob) {
-		this.isStartingWorkflowJob = isStartingWorkflowJob;
-	}
 	
 	public boolean isWorkflowCreatedJob() {
 		return isWorkflowCreatedJob;
@@ -59,10 +50,9 @@ public class TemplateWorkflowProperty extends JobProperty<AbstractProject<?, ?>>
 	}	
 
 	@DataBoundConstructor
-	public TemplateWorkflowProperty(String templateName, boolean isStartingWorkflowJob, boolean isWorkflowCreatedJob, 
+	public TemplateWorkflowProperty(String templateName, boolean isWorkflowCreatedJob, 
 			String workflowJobName, String workflowName) {		
 		this.templateName = templateName;
-		this.isStartingWorkflowJob = isStartingWorkflowJob;
 		this.isWorkflowCreatedJob = isWorkflowCreatedJob;
 		this.workflowJobName = workflowJobName;
 		this.workflowName = workflowName;

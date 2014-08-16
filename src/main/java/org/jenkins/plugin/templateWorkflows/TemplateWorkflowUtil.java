@@ -16,6 +16,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,8 +29,136 @@ import jenkins.model.Jenkins;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 
+import com.google.common.collect.Sets;
+
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class TemplateWorkflowUtil {
+	
+	public static void mekeWorkflowJobsConsistent() throws Exception {
+		
+		//all workflow jobs
+		Map<String, TemplatesWorkflowJob> workflowsJobs = findAllTemplateWorkflowJob();
+		
+		Set<String> allTemplateNames = getAllWorkflowTemplateNames();
+		
+		// find all workflows and update
+		Map<String, TemplateWorkflowInstance> workflowsIntances = findAllTemplateWorkflowInstance();
+		for (Entry<String, TemplateWorkflowInstance> templateWorkflowInstanceEntry : workflowsIntances.entrySet()) {
+			updateJobsFromTemplateWorkflowInstance(templateWorkflowInstanceEntry.getValue());
+		}
+		
+		// find all clonedjobs and if inconsistent with their workflow, delete
+		List<Job> clonedJobs = findAllClonedJobs();
+		for (Job clonedJob : clonedJobs) {
+			
+			TemplateWorkflowProperty templateWorkflowProperty = getTemplateWorkflowProperty(clonedJob);
+			
+			// deleted instance
+			if(!workflowsIntances.containsKey(templateWorkflowProperty.getWorkflowName())){
+				clonedJob.delete();
+				continue;
+			}
+			
+			// deleted workflow job
+			if(!workflowsJobs.containsKey(templateWorkflowProperty.getWorkflowJobName())){
+				clonedJob.delete();
+				continue;
+			}
+			
+			// deleted template group
+			if(!allTemplateNames.contains(templateWorkflowProperty.getTemplateName())){
+				clonedJob.delete();
+				continue;				
+			}
+			
+			// deleted worflow job to copy
+			TemplateWorkflowInstance workflowInstance = workflowsIntances.get(templateWorkflowProperty.getWorkflowName());
+			if(!workflowInstance.getRelatedJobs().containsValue(clonedJob.getName())){
+				clonedJob.delete();
+				continue;				
+			}			
+			
+			// deleted template job ? - listener responsibility
+			// altered template job - not a template any more, but still exists ? - need to be done before update?
+			
+			// TODO: Any more?
+			
+		}
+		
+	}
+	
+	public static void updateJobsFromTemplateWorkflowInstance(TemplateWorkflowInstance instance) throws Exception {
+		
+		// do the magic				
+		for (Entry<String, String> relatedJobEntry : instance.getRelatedJobs().entrySet()) {
+			
+			/*
+			 * If it is a fired change event, adding a new job in the relation, but the default 
+			 * job name property is disabled, the name could be null. 
+			 * It'll be ignored and the user need to open the interface to update manually. 
+			 */ 
+			if(relatedJobEntry.getValue() != null){
+				createOrUpdate(instance.getWorkFlowOwner(), instance.getInstanceName(), 
+					relatedJobEntry.getKey(), relatedJobEntry.getValue(), 
+					instance.getJobParameters(), instance.getRelatedJobs());
+			}
+		}
+		
+	}
+	
+	public static Map<String, String> fillJobRelation(TemplateWorkflowInstance instance){
+
+		List<Job> reletedJob = getRelatedJobs(instance.getTemplateName());
+		Map<String, String> newJobRelation = new TreeMap<String, String>();
+		for (Job job : reletedJob) {
+			if(instance.getRelatedJobs().containsKey(job.getName())){
+				newJobRelation.put(job.getName(), instance.getRelatedJobs().get(job.getName()));
+			} else if(instance.getUseTemplatePrefix() != null && instance.getUseTemplatePrefix()){
+				newJobRelation.put(job.getName(), instance.getInstanceName() + "-" + job.getName());
+			} else {
+				newJobRelation.put(job.getName(), null);				
+			}
+		}
+		return newJobRelation;
+		
+	}
+	
+	public static Map<String, String> fillJobParameters(TemplateWorkflowInstance instance){
+
+		Map<String, String> reletedProperties = getTemplateParamaters(instance.getTemplateName());
+		Map<String, String> newJobParameters = new TreeMap<String, String>();
+		for (Entry<String, String> entry : reletedProperties.entrySet()) {
+			newJobParameters.put(entry.getKey(), instance.getJobParameters().get(entry.getKey()));
+		}		
+		return newJobParameters;
+	}
+	
+	public static void updateTemplateWorkflowInstance(List<TemplateWorkflowInstance> instances) throws Exception {
+		Exception exp = null;
+		for (TemplateWorkflowInstance instance : instances) {
+			try {
+				updateTemplateWorkflowInstance(instance);				
+			} catch (Exception e) {
+				exp = e;
+			}
+		}
+		if(exp != null){
+			throw exp;
+		}
+	}
+	
+	
+	public static void updateTemplateWorkflowInstance(TemplateWorkflowInstance instance) throws Exception {
+		
+		TemplatesWorkflowJob workFlowJob = findTemplatesWorkflowJobByName(instance.getWorkFlowOwner());
+		if(null == workFlowJob){
+			throw new Exception(String.format("Workflow Job %s does not exists.",instance.getWorkFlowOwner()));
+		}
+		
+		workFlowJob.getSafeTemplateInstances().getInstances().put(instance.getInstanceName(), instance);
+		workFlowJob.save();
+		
+	}
 
 	public static Set<String> getAllWorkflowTemplateNames() {
 		
@@ -38,11 +168,11 @@ public class TemplateWorkflowUtil {
 		for (Item i : allItems) {
 			Collection<? extends Job> allJobs = i.getAllJobs();
 			for (Job j : allJobs) {
-				TemplateWorkflowProperty t = (TemplateWorkflowProperty) j.getProperty(TemplateWorkflowProperty.class);
-				if (t != null && t.getTemplateName() != null) {
-					for (String tName : t.getTemplateName().split(",")) {
+				if(itIsATemplateJob(j)){
+					TemplateWorkflowProperty templateWorkflowProperty = getTemplateWorkflowProperty(j);
+					for (String tName : templateWorkflowProperty.getTemplateName().split(",")) {
 						allWorkflowTemplateNames.add(tName.trim());
-					}
+					}					
 				}
 			}
 		}
@@ -52,14 +182,14 @@ public class TemplateWorkflowUtil {
 	public static List<Job> getRelatedJobs(final String templateName) {
 		List<Job> relatedJobs = new ArrayList<Job>();
 		List<Item> allItems = Jenkins.getInstance().getAllItems();
-		for (Item i : allItems) {
-			Collection<? extends Job> allJobs = i.getAllJobs();
-			for (Job j : allJobs) {
-				TemplateWorkflowProperty t = (TemplateWorkflowProperty) j.getProperty(TemplateWorkflowProperty.class);
-				if (t != null && !t.isWorkflowCreatedJob()) {
-					for (String tName : t.getTemplateName().split(",")) {
+		for (Item jenkinsItem : allItems) {
+			Collection<? extends Job> allJobs = jenkinsItem.getAllJobs();
+			for (Job job : allJobs) {
+				if (itIsATemplateJob(job)) {
+					TemplateWorkflowProperty templateWorkflowProperty = getTemplateWorkflowProperty(job);
+					for (String tName : templateWorkflowProperty.getTemplateName().split(",")) {
 						if (templateName != null && templateName.equalsIgnoreCase(tName.trim())) {
-							relatedJobs.add(j);
+							relatedJobs.add(job);
 						}
 					}
 				}
@@ -116,38 +246,39 @@ public class TemplateWorkflowUtil {
 		return status;
 	}
 	
-	public static TemplateWorkflowProperty getTemplateWorkflowProperty(final String jobName) {
-	
-		Job job = (Job) Jenkins.getInstance().getItem(jobName);
-		TemplateWorkflowProperty templateWorkflowProperty = (TemplateWorkflowProperty) job.getProperty(TemplateWorkflowProperty.class);
-		return templateWorkflowProperty;
-	}
-	
-	public static void deleteJobProperty(final String jobName) throws Exception {
-
+	public static void validateJobStatus(final String jobName) throws Exception {
+		//FIXME: change parameter jobName to a set, to be more effective during the isRunning validation		
 		String jobStatus = getJobStatus(jobName);
 		if(jobStatus != null){
 			throw new Exception(String.format("The Job %s is %s.", jobName, jobStatus));
+		}		
+	}
+	
+	public static TemplateWorkflowProperty getTemplateWorkflowProperty(final String jobName) {
+		Job job = (Job) Jenkins.getInstance().getItem(jobName);
+		if(job != null){
+			return getTemplateWorkflowProperty(job);			
 		}
-		
+		return null;
+	}
+	
+	public static TemplateWorkflowProperty getTemplateWorkflowProperty(Job job) {
+		TemplateWorkflowProperty templateWorkflowProperty = (TemplateWorkflowProperty) job.getProperty(TemplateWorkflowProperty.class);
+		return templateWorkflowProperty;
+	}	
+	
+	public static void deleteJobProperty(final String jobName) throws Exception {
 		Job job = (Job) Jenkins.getInstance().getItem(jobName);
 		if (job != null) {
 			job.removeProperty(TemplateWorkflowProperty.class);
 		}		
 	}
 	
-	public static void deleteJob(final String jobName) throws Exception {
-		
-		String jobStatus = getJobStatus(jobName);
-		if(jobStatus != null){
-			throw new Exception(String.format("The Job %s is %s.", jobName, jobStatus));
-		}
-		
+	public static void deleteJob(final String jobName) throws Exception {		
 		Job job = (Job) Jenkins.getInstance().getItem(jobName);
 		if (job != null) {
 			job.delete();
 		}
-		
 	}
 	
 	public static boolean notUsesJobName(final String jobName) throws Exception {
@@ -160,14 +291,9 @@ public class TemplateWorkflowUtil {
 
 		Job job = (Job) Jenkins.getInstance().getItem(jobName);
 		if(job != null){
-			TemplateWorkflowProperty templateWorkflowProperty = (TemplateWorkflowProperty) job.getProperty(TemplateWorkflowProperty.class);
-			if(templateWorkflowProperty == null){
-				used = true;
-			} else {
-				if( !templateWorkflowProperty.isWorkflowCreatedJob() ){
-					used = true;
-				}
-			}
+			if(!itIsAClonedJob(job)){
+				used = true;				
+			}			
 		}
 		
 		return used;
@@ -213,6 +339,66 @@ public class TemplateWorkflowUtil {
 		}		
 		return result;		
 	}
+	
+	public static Map<String, TemplateWorkflowInstance> findAllTemplateWorkflowInstance() {
+		
+		Map<String, TemplateWorkflowInstance> mapTemplateWorkflowInstances = new HashMap<String, TemplateWorkflowInstance>();
+		
+		for (TemplatesWorkflowJob templatesWorkflowJob : findAllTemplatesWorkflowJobJobs()) {
+			Collection<TemplateWorkflowInstance> templatesWorkflowJobInstances = templatesWorkflowJob.getTemplateInstances();
+			for (TemplateWorkflowInstance templateWorkflowInstance : templatesWorkflowJobInstances) {
+				mapTemplateWorkflowInstances.put(templateWorkflowInstance.getInstanceName(), templateWorkflowInstance);
+			}
+		}
+		
+		return mapTemplateWorkflowInstances;
+		
+	}
+	
+	public static List<TemplateWorkflowInstance> findTemplateWorkflowInstanceRelatedWtihTemplateName(String templateName) {
+		
+		List<TemplateWorkflowInstance> listTemplateWorkflowInstances = new ArrayList<TemplateWorkflowInstance>();
+		
+		if (StringUtils.isBlank(templateName)) {
+			return listTemplateWorkflowInstances;
+		}
+		
+		Set<String> templatesName = Sets.newHashSet(templateName.split(","));
+		
+		for (TemplatesWorkflowJob templatesWorkflowJob : findAllTemplatesWorkflowJobJobs()) {
+			Collection<TemplateWorkflowInstance> templatesWorkflowJobInstances = templatesWorkflowJob.getTemplateInstances();
+			for (TemplateWorkflowInstance templateWorkflowInstance : templatesWorkflowJobInstances) {
+				if(templatesName.contains( templateWorkflowInstance.getTemplateName() )){
+					// FIXME: Pass the reference could be a problem? 
+					listTemplateWorkflowInstances.add(templateWorkflowInstance);
+				}
+			}
+		}
+		
+		return listTemplateWorkflowInstances;
+		
+	}
+	
+	public static Map<String, TemplatesWorkflowJob> findAllTemplateWorkflowJob() {
+		
+		Map<String, TemplatesWorkflowJob> mapTemplateWorkflowJob = new HashMap<String, TemplatesWorkflowJob>();
+		
+		for (TemplatesWorkflowJob templatesWorkflowJob : findAllTemplatesWorkflowJobJobs()) {
+			mapTemplateWorkflowJob.put(templatesWorkflowJob.getName(), templatesWorkflowJob);
+		}
+		
+		return mapTemplateWorkflowJob;
+		
+	}
+	
+	public static TemplatesWorkflowJob findTemplatesWorkflowJobByName(String jobName) {		
+		TemplatesWorkflowJob templatesWorkflowJob = null;
+		Job job = (Job) Jenkins.getInstance().getItem(jobName);
+		if (job != null && job instanceof TemplatesWorkflowJob ) {
+			templatesWorkflowJob = (TemplatesWorkflowJob) job;
+		}
+		return templatesWorkflowJob;
+	}
 
 	public static List<TemplatesWorkflowJob> findAllTemplatesWorkflowJobJobs() {
 		List<TemplatesWorkflowJob> result = new ArrayList<TemplatesWorkflowJob>();
@@ -226,9 +412,45 @@ public class TemplateWorkflowUtil {
 			}
 		}		
 		return result;		
+	}
+	
+	public static List<Job> findAllClonedJobs() {
+		List<Job> result = new ArrayList<Job>();
+		List<Item> allItems = Jenkins.getInstance().getAllItems();
+		for (Item jenkinsItem : allItems) {
+			if(jenkinsItem instanceof Job){
+				Job job = (Job)jenkinsItem;
+				if(itIsAClonedJob(job)){
+					result.add(job);
+				}
+			}
+		}
+		return result;		
+	}
+	
+	public static boolean itIsATemplateJob(Job job) {
+		
+		TemplateWorkflowProperty jobProperty = TemplateWorkflowUtil.getTemplateWorkflowProperty(job.getName());
+		if( jobProperty != null && !jobProperty.isWorkflowCreatedJob() 
+				&& StringUtils.isNotBlank(jobProperty.getTemplateName()) ){
+			return true;
+		}
+		
+		return false;
+	}
+	
+	private static boolean itIsAClonedJob(Job job) {
+		
+		TemplateWorkflowProperty jobProperty = TemplateWorkflowUtil.getTemplateWorkflowProperty(job.getName());
+		if( jobProperty != null && jobProperty.isWorkflowCreatedJob() ){
+			return true;
+		}
+		
+		return false;
 	}	
 	
-	public static boolean createOrUpdate(final String workflowJobName, final String workflowName, final String templateJobName, final String clonedJobName, final Map<String, String> clonedJobParams, final Map<String, String> clonedJobGroup) throws Exception {
+	private static boolean createOrUpdate(final String workflowJobName, final String workflowName, final String templateJobName, 
+			final String clonedJobName, final Map<String, String> clonedJobParams, final Map<String, String> clonedJobGroup) throws Exception {
 
 		Job templateJob = (Job) Jenkins.getInstance().getItem(templateJobName);
 		String jobXml = FileUtils.readFileToString(templateJob.getConfigFile().getFile());
