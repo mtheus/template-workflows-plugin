@@ -114,7 +114,7 @@ public class TemplateWorkflowUtil {
 			if(instance.getRelatedJobs().containsKey(job.getName())){
 				newJobRelation.put(job.getName(), instance.getRelatedJobs().get(job.getName()));
 			} else if(instance.getUseTemplatePrefix() != null && instance.getUseTemplatePrefix()){
-				newJobRelation.put(job.getName(), instance.getInstanceName() + "-" + job.getName());
+				newJobRelation.put(job.getName(), instance.getInstanceName() + "-" + fixTagWords(job.getName()));
 			} else {
 				newJobRelation.put(job.getName(), null);				
 			}
@@ -123,6 +123,14 @@ public class TemplateWorkflowUtil {
 		
 	}
 	
+	private static String fixTagWords(String name) {
+		// FIXME: use regex and put in a global jenkins configuration.
+		String fixedName = name;
+		fixedName = fixedName.replace("-template", "");
+		fixedName = fixedName.replace("-example", "");
+		return fixedName;
+	}
+
 	public static Map<String, String> fillJobParameters(TemplateWorkflowInstance instance){
 
 		Map<String, String> reletedProperties = getTemplateParamaters(instance.getTemplateName());
