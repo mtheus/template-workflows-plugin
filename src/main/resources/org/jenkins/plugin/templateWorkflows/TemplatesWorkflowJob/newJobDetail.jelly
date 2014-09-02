@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+Create a Template Workflow Job to group your workflow settings. This feature allow you to branch and keep you workflow jobs updated. All instances are cloned based in templates.
+</div>
