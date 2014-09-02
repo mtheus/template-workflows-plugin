@@ -104,18 +104,32 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		if( overwriteExistingJob == null ){
 			overwriteExistingJob = Boolean.FALSE;
 		}
+		
+		if(ACTION_REFRESH.equals(postedAction)){
+			
+			selectedInstance.setInstanceName(templateInstanceName);
+			selectedInstance.setTemplateName(templateName);
+			selectedInstance.setWorkFlowOwner(this.getName());
+
+			fillJobRelation();
+			fillJobParameters();
+		}
 
 		for (Object key : submittedForm.keySet()) {
 			if(key.toString().startsWith("relatedJob")){
 				String[] keyArr = key.toString().split("#");
 				String jobKey = keyArr.length == 1 ? null : keyArr[1];
 				String value = submittedForm.getString(key.toString());
-				jobRelation.put(jobKey, value == null ? value : value.trim());
+				if(jobRelation.containsKey(jobKey)){
+					jobRelation.put(jobKey, value == null ? value : value.trim());
+				}
 			}
 			if(key.toString().startsWith("parameter")){
 				String[] keyArr = key.toString().split("#");
-				String jobKey = keyArr.length == 1 ? null : keyArr[1];
-				jobParameters.put(jobKey, submittedForm.getString(key.toString()));
+				String propertyKey = keyArr.length == 1 ? null : keyArr[1];
+				if(jobParameters.containsKey(propertyKey)){
+					jobParameters.put(propertyKey, submittedForm.getString(key.toString()));
+				}
 			}
 		}
 
@@ -135,12 +149,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		else if(ACTION_REFRESH.equals(postedAction)){
 
 			//TODO: Validar notUsesWorkflowName(selectedInstance.getInstanceName())
-			selectedInstance.setInstanceName( templateInstanceName );
-			selectedInstance.setTemplateName(templateName);
-			selectedInstance.setWorkFlowOwner(this.getName());
-
-			fillJobRelation();
-			fillJobParameters();
 			forwardBack(req, rsp);
 		}
 		else if(ACTION_SAVE.equals(postedAction)){
