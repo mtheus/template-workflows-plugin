@@ -25,25 +25,21 @@ public class TemplateWorkflowItemListener extends ItemListener {
 
 	@Override
 	public void onCreated(Item item) {
-		//if(true)return; /*teste*/
 		updateTemplateInstanceMetadata(item);
 	}
 
 	@Override
 	public void onUpdated(Item item) {
-		//if(true)return; /*teste*/
 		updateTemplateInstanceMetadata(item);
 	}
 
 	@Override
 	public void onDeleted(Item item) {
-		//if(true)return; /*teste*/
 		updateTemplateInstanceMetadata(item);
 	}
 
 	@Override
 	public void onRenamed(Item item, String oldName, String newName) {
-		//if(true)return; /*teste*/
 		updateTemplateInstanceMetadata(item);
 	}
 
@@ -66,14 +62,12 @@ public class TemplateWorkflowItemListener extends ItemListener {
 	}
 
 	private void completeUpdate(List<TemplateWorkflowInstance> instances) {
-
 		try {
 			updateTemplateWorkflowInstance(instances);
 		} catch (Exception e) {
 			//TODO: check if this is right way
 			throw Throwables.propagate(e);
 		}
-
 		try {
 			mekeWorkflowJobsConsistent();
 		} catch (Exception e) {

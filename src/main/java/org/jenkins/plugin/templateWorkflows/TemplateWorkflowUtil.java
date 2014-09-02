@@ -58,21 +58,21 @@ public class TemplateWorkflowUtil {
 
 			// deleted instance
 			if(!workflowsIntances.containsKey(templateWorkflowProperty.getWorkflowName())){
-				LOGGER.info(String.format("JOB %s deleted.", clonedJob.getName()));
+				LOGGER.info(String.format("JOB %s deleted. (1)", clonedJob.getName()));
 				clonedJob.delete();
 				continue;
 			}
 
 			// deleted workflow job
 			if(!workflowsJobs.containsKey(templateWorkflowProperty.getWorkflowJobName())){
-				LOGGER.info(String.format("JOB %s deleted.", clonedJob.getName()));
+				LOGGER.info(String.format("JOB %s deleted. (2)", clonedJob.getName()));
 				clonedJob.delete();
 				continue;
 			}
 
 			// deleted template group
 			if(!allTemplateNames.contains(templateWorkflowProperty.getTemplateName())){
-				LOGGER.info(String.format("JOB %s deleted.", clonedJob.getName()));
+				LOGGER.info(String.format("JOB %s deleted. (3)", clonedJob.getName()));
 				clonedJob.delete();
 				continue;
 			}
@@ -80,7 +80,7 @@ public class TemplateWorkflowUtil {
 			// deleted worflow job to copy
 			TemplateWorkflowInstance workflowInstance = workflowsIntances.get(templateWorkflowProperty.getWorkflowName());
 			if(!workflowInstance.getRelatedJobs().containsValue(clonedJob.getName())){
-				LOGGER.info(String.format("JOB %s deleted.", clonedJob.getName()));
+				LOGGER.info(String.format("JOB %s deleted. (4)", clonedJob.getName()));
 				clonedJob.delete();
 				continue;
 			}
@@ -170,6 +170,7 @@ public class TemplateWorkflowUtil {
 
 		workFlowJob.getSafeTemplateInstances().getInstances().put(instance.getInstanceName(), instance);
 		workFlowJob.save();
+		LOGGER.info(String.format("JOB %s, Worflow %s: saved.", workFlowJob.getName(), instance.getInstanceName()));
 
 	}
 
@@ -180,9 +181,9 @@ public class TemplateWorkflowUtil {
 		List<Item> allItems = Jenkins.getInstance().getAllItems();
 		for (Item i : allItems) {
 			Collection<? extends Job> allJobs = i.getAllJobs();
-			for (Job j : allJobs) {
-				if(itIsATemplateJob(j)){
-					TemplateWorkflowProperty templateWorkflowProperty = getTemplateWorkflowProperty(j);
+			for (Job job : allJobs) {
+				if(itIsATemplateJob(job)){
+					TemplateWorkflowProperty templateWorkflowProperty = getTemplateWorkflowProperty(job);
 					for (String tName : templateWorkflowProperty.getTemplateName().split(",")) {
 						allWorkflowTemplateNames.add(tName.trim());
 					}
@@ -382,8 +383,7 @@ public class TemplateWorkflowUtil {
 			Collection<TemplateWorkflowInstance> templatesWorkflowJobInstances = templatesWorkflowJob.getTemplateInstances();
 			for (TemplateWorkflowInstance templateWorkflowInstance : templatesWorkflowJobInstances) {
 				if(templatesName.contains( templateWorkflowInstance.getTemplateName() )){
-					// FIXME: Pass the reference could be a problem?
-					listTemplateWorkflowInstances.add(templateWorkflowInstance);
+					listTemplateWorkflowInstances.add(templateWorkflowInstance.clone());
 				}
 			}
 		}
@@ -443,7 +443,7 @@ public class TemplateWorkflowUtil {
 
 	public static boolean itIsATemplateJob(Job job) {
 
-		TemplateWorkflowProperty jobProperty = TemplateWorkflowUtil.getTemplateWorkflowProperty(job.getName());
+		TemplateWorkflowProperty jobProperty = TemplateWorkflowUtil.getTemplateWorkflowProperty(job);
 		if( jobProperty != null && !jobProperty.isWorkflowCreatedJob()
 				&& StringUtils.isNotBlank(jobProperty.getTemplateName()) ){
 			return true;
@@ -452,9 +452,9 @@ public class TemplateWorkflowUtil {
 		return false;
 	}
 
-	private static boolean itIsAClonedJob(Job job) {
+	public static boolean itIsAClonedJob(Job job) {
 
-		TemplateWorkflowProperty jobProperty = TemplateWorkflowUtil.getTemplateWorkflowProperty(job.getName());
+		TemplateWorkflowProperty jobProperty = TemplateWorkflowUtil.getTemplateWorkflowProperty(job);
 		if( jobProperty != null && jobProperty.isWorkflowCreatedJob() ){
 			return true;
 		}
@@ -505,7 +505,7 @@ public class TemplateWorkflowUtil {
 				property = new TemplateWorkflowProperty();
 				clonedJob.addProperty(property);
 			}
-			property.setTemplateName(templateName); // normalized - remove comma separated
+			property.setTemplateName(templateName);
 			property.setWorkflowCreatedJob(Boolean.TRUE);
 			property.setWorkflowJobName(workflowJobName);
 			property.setWorkflowName(workflowName);
@@ -520,7 +520,6 @@ public class TemplateWorkflowUtil {
 			try {
 				is.close();
 			} catch (Exception e) {
-				e.printStackTrace();
 				return false;
 			}
 		}
