@@ -47,7 +47,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 
 	private String templateName;
 	private String templateInstanceName;
-	private Boolean useTemplatePrefix;
 	private Boolean overwriteExistingJob;
 	private Map<String, String> jobParameters;
 	private Map<String, String> jobRelation;
@@ -76,7 +75,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 
 			this.templateInstanceName = selectedInstance.getInstanceName();
 			this.templateName = selectedInstance.getTemplateName();
-			this.useTemplatePrefix = selectedInstance.getUseTemplatePrefix();
 			this.jobParameters =  selectedInstance.getJobParameters();
 			this.jobRelation = selectedInstance.getRelatedJobs();
 			this.overwriteExistingJob = Boolean.FALSE;
@@ -102,12 +100,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		JSONObject submittedForm = req.getSubmittedForm();
 		templateName = submittedForm.getString("templateName");
 		templateInstanceName = submittedForm.getString("templateInstanceName");
-
-		useTemplatePrefix = submittedForm.getBoolean("useTemplatePrefix");
-		if( useTemplatePrefix == null ){
-			useTemplatePrefix = Boolean.TRUE;
-		}
-
 		overwriteExistingJob = submittedForm.getBoolean("overwriteExistingJob");
 		if( overwriteExistingJob == null ){
 			overwriteExistingJob = Boolean.FALSE;
@@ -145,7 +137,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			//TODO: Validar notUsesWorkflowName(selectedInstance.getInstanceName())
 			selectedInstance.setInstanceName( templateInstanceName );
 			selectedInstance.setTemplateName(templateName);
-			selectedInstance.setUseTemplatePrefix(useTemplatePrefix);
 			selectedInstance.setWorkFlowOwner(this.getName());
 
 			fillJobRelation();
@@ -173,7 +164,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				}
 
 				selectedInstance.setTemplateName(templateName);
-				selectedInstance.setUseTemplatePrefix(useTemplatePrefix);
 				selectedInstance.setWorkFlowOwner(this.getName());
 				selectedInstance.setJobParameters(jobParameters);
 				selectedInstance.setRelatedJobs(jobRelation);
@@ -255,7 +245,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		getErrorMap().clear();
 		this.templateInstanceName = null;
 		this.templateName = null;
-		this.useTemplatePrefix = Boolean.TRUE;
 		this.overwriteExistingJob = Boolean.FALSE;
 		this.jobParameters = null;
 		this.jobRelation = null;
@@ -282,10 +271,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 
 	public String getTemplateInstanceName() {
 		return this.templateInstanceName;
-	}
-
-	public Boolean getUseTemplatePrefix() {
-		return useTemplatePrefix;
 	}
 
 	public Boolean getOverwriteExistingJob() {

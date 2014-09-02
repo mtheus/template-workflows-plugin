@@ -115,10 +115,8 @@ public class TemplateWorkflowUtil {
 		for (Job job : reletedJob) {
 			if(instance.getRelatedJobs().containsKey(job.getName())){
 				newJobRelation.put(job.getName(), instance.getRelatedJobs().get(job.getName()));
-			} else if(instance.getUseTemplatePrefix() != null && instance.getUseTemplatePrefix()){
-				newJobRelation.put(job.getName(), instance.getInstanceName() + "-" + fixTagWords(job.getName()));
 			} else {
-				newJobRelation.put(job.getName(), null);
+				newJobRelation.put(job.getName(), instance.getInstanceName() + "-" + fixTagWords(job.getName()));
 			}
 		}
 		return newJobRelation;

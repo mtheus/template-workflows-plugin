@@ -37,11 +37,6 @@
 						</j:if>
 					</f:entry>
 
-					<f:entry field="useTemplatePrefix">
-						<f:checkbox />
-						${%Use workflow name as job prefix and listen for changes in any template}
-					</f:entry>
-
 					<f:entry title="Template Name" field="templateName">
 						<!-- fixme: there are some trick here, change later: i think this is acceptable onchange="document.getElementsByName('workflowConfigForm')[0].submit()" -->
 						<!-- another option is use the ajaxapi, but there are side effects, like post loop. <f:select onchange="document.getElementById('yui-gen1-button').click();"/> -->
