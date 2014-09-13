@@ -3,6 +3,7 @@ package org.jenkins.plugin.templateWorkflows;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.deleteJob;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.deleteJobProperty;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.getJobStatus;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.isWorkflowNameBeenUsed;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.mekeWorkflowJobsConsistent;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.notUsesJobName;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.validateJobStatus;
@@ -40,9 +41,15 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 
 	private static final String ACTION_REFRESH = "FormEvent";
 	private static final String ACTION_SAVE = "Save";
+	private static final String ACTION_CONTINUE = "Continue";
 	private static final String ACTION_DELETE = "Delete Only";
 	private static final String ACTION_DELETE_FULL = "Delete Workflow and Jobs";
+	
+	private static final String FORM_STATE_NEW = "NEW";
+	private static final String FORM_STATE_EDIT = "EDIT";
 
+	private String formState;
+	
 	private TemplateWorkflowInstances templateInstances;
 
 	private String templateName;
@@ -69,10 +76,11 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 
 		if(instanceName == null ||  !getSafeTemplateInstances().getInstances().containsKey(instanceName)){
 			this.selectedInstance = new TemplateWorkflowInstance();
+			this.formState = FORM_STATE_NEW;
 		}
 		else {
 			this.selectedInstance = getSafeTemplateInstances().getInstances().get(instanceName).clone();
-
+			this.formState = FORM_STATE_EDIT;
 			this.templateInstanceName = selectedInstance.getInstanceName();
 			this.templateName = selectedInstance.getTemplateName();
 			this.jobParameters =  selectedInstance.getJobParameters();
@@ -96,47 +104,14 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		if(null == postedAction){
 			postedAction = ACTION_REFRESH;
 		}
-
-		JSONObject submittedForm = req.getSubmittedForm();
-		templateName = submittedForm.getString("templateName");
-		templateInstanceName = submittedForm.getString("templateInstanceName");
-		overwriteExistingJob = submittedForm.getBoolean("overwriteExistingJob");
-		if( overwriteExistingJob == null ){
-			overwriteExistingJob = Boolean.FALSE;
-		}
 		
-		if(ACTION_REFRESH.equals(postedAction)){
-			
-			selectedInstance.setInstanceName(templateInstanceName);
-			selectedInstance.setTemplateName(templateName);
-			selectedInstance.setWorkFlowOwner(this.getName());
-
-			fillJobRelation();
-			fillJobParameters();
-		}
-
-		for (Object key : submittedForm.keySet()) {
-			if(key.toString().startsWith("relatedJob")){
-				String[] keyArr = key.toString().split("#");
-				String jobKey = keyArr.length == 1 ? null : keyArr[1];
-				String value = submittedForm.getString(key.toString());
-				if(jobRelation.containsKey(jobKey)){
-					jobRelation.put(jobKey, value == null ? value : value.trim());
-				}
-			}
-			if(key.toString().startsWith("parameter")){
-				String[] keyArr = key.toString().split("#");
-				String propertyKey = keyArr.length == 1 ? null : keyArr[1];
-				if(jobParameters.containsKey(propertyKey)){
-					jobParameters.put(propertyKey, submittedForm.getString(key.toString()));
-				}
-			}
-		}
-
 		if(ACTION_DELETE.equals(postedAction) || ACTION_DELETE_FULL.equals(postedAction)){
+			Map<String, String> relatedJobs = selectedInstance.getRelatedJobs();
 			getSafeTemplateInstances().getInstances().remove(selectedInstance.getInstanceName());
-			for (Entry<String, String> entry : jobRelation.entrySet()) {
+			for (Entry<String, String> entry : relatedJobs.entrySet()) {
 				validateJobStatus(entry.getValue());
+			}
+			for (Entry<String, String> entry : relatedJobs.entrySet()) {
 				if(ACTION_DELETE_FULL.equals(postedAction)){
 					deleteJob(entry.getValue());
 				}
@@ -145,44 +120,86 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 				}
 			}
 			finishAndRedirect(req, rsp);
+			return;
 		}
-		else if(ACTION_REFRESH.equals(postedAction)){
+		
+		JSONObject submittedForm = req.getSubmittedForm();
+		
+		if(ACTION_CONTINUE.equals(postedAction)){
+			
+			templateName = submittedForm.getString("templateName");
+			templateInstanceName = submittedForm.getString("templateInstanceName");
+			
+			// Validate
+			validateNames();
+			if(!getErrorMap().isEmpty()){
+				forwardBack(req, rsp);
+				return;
+			}			
+			
+			selectedInstance.setInstanceName(templateInstanceName);
+			selectedInstance.setTemplateName(templateName);
+			selectedInstance.setWorkFlowOwner(this.getName());
 
-			//TODO: Validar notUsesWorkflowName(selectedInstance.getInstanceName())
+			fillJobRelation();
+			fillJobParameters();
+			
+			this.formState = FORM_STATE_EDIT;
 			forwardBack(req, rsp);
+			return;			
+			
 		}
-		else if(ACTION_SAVE.equals(postedAction)){
+			
+		if(ACTION_SAVE.equals(postedAction)){
+			
+			// Get posted data
+			
+			overwriteExistingJob = submittedForm.getBoolean("overwriteExistingJob");
+			if( overwriteExistingJob == null ){
+				overwriteExistingJob = Boolean.FALSE;
+			}		
+			
+			for (Object key : submittedForm.keySet()) {
+				if(key.toString().startsWith("relatedJob")){
+					String[] keyArr = key.toString().split("#");
+					String jobKey = keyArr.length == 1 ? null : keyArr[1];
+					String value = submittedForm.getString(key.toString());
+					if(jobRelation.containsKey(jobKey)){
+						jobRelation.put(jobKey, value == null ? value : value.trim());
+					}
+				}
+				if(key.toString().startsWith("parameter")){
+					String[] keyArr = key.toString().split("#");
+					String propertyKey = keyArr.length == 1 ? null : keyArr[1];
+					if(jobParameters.containsKey(propertyKey)){
+						jobParameters.put(propertyKey, submittedForm.getString(key.toString()));
+					}
+				}
+			}
 
 			validateForm(submittedForm);
 
 			if(!getErrorMap().isEmpty()){
 				forwardBack(req, rsp);
-			}
-			else {
-
-				if(selectedInstance.getInstanceName() == null){ // is new
-					//TODO: Validar notUsesWorkflowName(selectedInstance.getInstanceName())
-					selectedInstance.setInstanceName( templateInstanceName );
-				} else if( !selectedInstance.getInstanceName().equals(templateInstanceName)){ // renamed
-					//TODO: Validar notUsesWorkflowName(selectedInstance.getInstanceName())
-					// TODO: check name conflict
-					addMessage(null, "Rename Workflow is not supported yet!");
-					forwardBack(req, rsp);
-					return;
-				}
-
-				selectedInstance.setTemplateName(templateName);
-				selectedInstance.setWorkFlowOwner(this.getName());
-				selectedInstance.setJobParameters(jobParameters);
-				selectedInstance.setRelatedJobs(jobRelation);
-
-				getSafeTemplateInstances().getInstances().put(selectedInstance.getInstanceName(), selectedInstance);
-
-				mekeWorkflowJobsConsistent();
-
-				finishAndRedirect(req, rsp);
+				return;
 			}
 
+			selectedInstance.setJobParameters(jobParameters);
+			selectedInstance.setRelatedJobs(jobRelation);
+
+			getSafeTemplateInstances().getInstances().put(selectedInstance.getInstanceName(), selectedInstance);
+
+			mekeWorkflowJobsConsistent();
+
+			finishAndRedirect(req, rsp);
+			return;
+
+		}		
+						
+		if(ACTION_REFRESH.equals(postedAction)){
+
+			forwardBack(req, rsp);
+			return;
 		}
 
 	}
@@ -204,9 +221,9 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		this.save();
 		rsp.sendRedirect2(req.getContextPath() + "/job/" + getName());
 	}
-
-	private void validateForm(JSONObject submittedForm){
-
+	
+	private void validateNames() throws Exception{
+		
 		this.templateInstanceName = StringUtils.trimToEmpty(templateInstanceName);
 		if(StringUtils.isEmpty(templateInstanceName)){
 			addMessage("templateInstanceName", "Workflow Name is required");
@@ -217,7 +234,18 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		if(StringUtils.isEmpty(templateName)){
 			addMessage("templateName", "Template Name is required");
 			return;
-		}
+		}		
+		
+		// Validate Workflow Name (templateInstanceName)
+		if( StringUtils.isNotEmpty(templateInstanceName) ){
+			if(isWorkflowNameBeenUsed(templateInstanceName)){
+				addMessage("templateInstanceName", "Workflow Name is been used.");
+				return;
+			}
+		}				
+	}
+
+	private void validateForm(JSONObject submittedForm){
 
 		for (Entry<String, String> entry : jobRelation.entrySet()) {
 
@@ -256,7 +284,6 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		this.overwriteExistingJob = Boolean.FALSE;
 		this.jobParameters = null;
 		this.jobRelation = null;
-
 	}
 
 	public Map<String, String> getJobRelation() {
@@ -385,9 +412,18 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 		}
 		return templateInstances;
 	}
+	
+	public String getFormState() {
+		return formState;
+	}
 
 	@Override
 	protected void reload() {
 	};
 
+	/**
+	 * http://localhost:8080/job/workflow/api/json?pretty=true
+	 * https://wiki.jenkins-ci.org/display/JENKINS/Exposing+data+to+the+remote+API
+	 */
+	
 }

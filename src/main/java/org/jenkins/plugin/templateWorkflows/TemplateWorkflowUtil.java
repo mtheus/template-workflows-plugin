@@ -312,7 +312,7 @@ public class TemplateWorkflowUtil {
 
 	}
 
-	public static boolean notUsesWorkflowName(final String workflowName) throws Exception {
+	public static boolean isWorkflowNameBeenUsed(final String workflowName) throws Exception {
 
 		boolean used = false;
 

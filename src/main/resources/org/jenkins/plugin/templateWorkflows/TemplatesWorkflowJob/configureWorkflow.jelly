@@ -26,9 +26,11 @@
 							<br />
 						</j:if>
 					</f:block>
+					
+					<j:if test="${it.formState == 'NEW'}">
 
-					<f:entry title="Workflow Name" field="templateInstanceName">
-						<f:textbox />
+					<f:entry title="Workflow Name" field="templateInstanceName"> 
+						<f:textbox/>
 						<j:if test="${!empty(it.getErrorMessages('templateInstanceName'))}">
 							<j:forEach var="msg"
 								items="${it.getErrorMessages('templateInstanceName')}">
@@ -37,10 +39,8 @@
 						</j:if>
 					</f:entry>
 
-					<f:entry title="Template Name" field="templateName">
-						<!-- fixme: there are some trick here, change later: i think this is acceptable onchange="document.getElementsByName('workflowConfigForm')[0].submit()" -->
-						<!-- another option is use the ajaxapi, but there are side effects, like post loop. <f:select onchange="document.getElementById('yui-gen1-button').click();"/> -->
-						<select class="setting-input" name="templateName" onchange="document.getElementById('formevent').click();">
+					<f:entry title="Template Name" field="templateName"> 
+						<select class="setting-input" name="templateName">
 							<f:option selected="${null==it.templateName}" value=""></f:option>
 							<j:forEach var="opt" items="${it.getAllWorkflowTemplateNames()}">
 								<f:option selected="${opt==it.templateName}"
@@ -48,8 +48,26 @@
 							</j:forEach>
 						</select>
 					</f:entry>
+					
+					<table width="100%" border="0" cellpadding="0" cellspacing="0"
+						class="" style="margin-top: 10px;">						
+						<tr><td>							
+						<f:submit name="action" value="Continue"/>					
+						</td></tr>
+					</table>
+					
+					</j:if>
+					<j:if test="${it.formState == 'EDIT'}">
+					
+					<f:entry title="Workflow Name" field="templateInstanceName">
+						<f:readOnlyTextbox/>
+					</f:entry>
 
-					<br /><br />
+					<f:entry title="Template Name" field="templateName">
+						<f:readOnlyTextbox/>
+					</f:entry>
+					
+					<br /><br />					
 
 					<table width="100%" border="1" cellpadding="2" cellspacing="0"
 						class="pane bigtable" style="margin-top: 5">
@@ -122,9 +140,10 @@
 					<f:submit name="action" value="Save" />
 					<f:submit name="action" value="Delete Only" />
 					<f:submit name="action" value="Delete Workflow and Jobs" />
-					<input type="submit" name="action" value="FormEvent" id="formevent" style="display: none"/>
 					 
-
+					</j:if>
+					
+					<input type="submit" name="action" value="FormEvent" id="formevent" style="display: none"/>
 
 				</table>
 
