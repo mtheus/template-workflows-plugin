@@ -8,7 +8,7 @@ import org.kohsuke.stapler.export.ExportedBean;
 
 import com.google.common.collect.Maps;
 
-@ExportedBean
+@ExportedBean(defaultVisibility = 2)
 public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInstance> {
 
 	private String instanceName;
@@ -50,12 +50,10 @@ public class TemplateWorkflowInstance implements Comparable<TemplateWorkflowInst
 		return this.templateName;
 	}
 
-	@Exported
 	public String getWorkFlowOwner() {
 		return workFlowOwner;
 	}
 
-	@Exported
 	public int getRelatedJobsSize() {
 		if( this.relatedJobs == null ) {
 			return 0;

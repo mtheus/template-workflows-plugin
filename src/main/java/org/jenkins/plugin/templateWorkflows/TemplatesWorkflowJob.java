@@ -34,10 +34,13 @@ import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.bind.JavaScriptMethod;
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.export.ExportedBean;
 
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
-public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, TemplateswWorkflowRun> implements TopLevelItem {
+
+public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, TemplatesWorkflowRun> implements TopLevelItem {
 
 	private static final String ACTION_REFRESH = "FormEvent";
 	private static final String ACTION_SAVE = "Save";
@@ -97,6 +100,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	public synchronized void doConfigWorkflow(StaplerRequest req, StaplerResponse rsp) throws Exception {
 
 		//TODO: There are some security issues?
+		//Hudson.getInstance().getACL().hasPermission(Hudson.ADMINISTER)
 
 		getErrorMap().clear();
 
@@ -421,9 +425,19 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 	protected void reload() {
 	};
 
+	@Exported
+	public List<TemplateWorkflowInstance> getInstances() {
+		ArrayList<TemplateWorkflowInstance> retorno = new ArrayList<TemplateWorkflowInstance>();		
+		retorno.addAll(templateInstances.getInstances().values());		
+		return retorno;
+	}	
+	
 	/**
 	 * http://localhost:8080/job/workflow/api/json?pretty=true
 	 * https://wiki.jenkins-ci.org/display/JENKINS/Exposing+data+to+the+remote+API
 	 */
 	
 }
+
+
+
