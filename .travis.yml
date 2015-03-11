@@ -1,0 +1,9 @@
+# .travis.yml
+language: java
+
+jdk:
+  - oraclejdk7
+
+after_success:
+  - mvn test
+  
