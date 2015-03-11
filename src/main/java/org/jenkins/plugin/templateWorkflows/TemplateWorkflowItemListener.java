@@ -44,6 +44,13 @@ public class TemplateWorkflowItemListener extends ItemListener {
 	}
 
 	private void updateTemplateInstanceMetadata(Item item) {
+		
+		try {
+			// Sorry for that =[
+			Thread.sleep(30);			
+		} catch (InterruptedException e) {
+		}
+		
 		Job job = getProject(item);
 		if(job == null){
 			return;

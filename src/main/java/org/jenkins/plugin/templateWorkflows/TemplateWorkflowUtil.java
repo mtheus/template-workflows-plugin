@@ -469,10 +469,16 @@ public class TemplateWorkflowUtil {
 			final Map<String, String> clonedJobParams,
 			final Map<String, String> clonedJobGroup
 			) throws Exception {
-
+		
 		Job templateJob = (Job) Jenkins.getInstance().getItem(templateJobName);
+		
+		if(templateJob == null){
+			LOGGER.info(String.format("TemplateJobName not found: "+templateJob+" skipping..."));
+			return false;
+		}
+		
 		String jobXml = FileUtils.readFileToString(templateJob.getConfigFile().getFile());
-
+		
 		for (String origJob : clonedJobGroup.keySet()) {
 			jobXml = jobXml.replaceAll(">\\s*" + origJob + "\\s*</", ">" + clonedJobGroup.get(origJob) + "</");
 			jobXml = jobXml.replaceAll(",\\s*" + origJob, "," + clonedJobGroup.get(origJob));
