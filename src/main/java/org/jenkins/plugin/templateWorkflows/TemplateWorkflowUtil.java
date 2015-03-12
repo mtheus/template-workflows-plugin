@@ -37,7 +37,7 @@ public class TemplateWorkflowUtil {
 
 	private static final Logger LOGGER = Logger.getLogger(TemplateWorkflowUtil.class.getName());
 
-	public static void mekeWorkflowJobsConsistent() throws Exception {
+	public static void makeWorkflowJobsConsistent() throws Exception {
 
 		//all workflow jobs
 		Map<String, TemplatesWorkflowJob> workflowsJobs = findAllTemplateWorkflowJob();
@@ -119,6 +119,10 @@ public class TemplateWorkflowUtil {
 				newJobRelation.put(job.getName(), instance.getInstanceName() + "-" + fixTagWords(job.getName()));
 			}
 		}
+		
+		
+		LOGGER.info("fillJobRelation: "+newJobRelation.toString());
+		
 		return newJobRelation;
 
 	}
@@ -440,7 +444,7 @@ public class TemplateWorkflowUtil {
 	}
 
 	public static boolean itIsATemplateJob(Job job) {
-
+		
 		TemplateWorkflowProperty jobProperty = TemplateWorkflowUtil.getTemplateWorkflowProperty(job);
 		if( jobProperty != null && !jobProperty.isWorkflowCreatedJob()
 				&& StringUtils.isNotBlank(jobProperty.getTemplateName()) ){
@@ -451,13 +455,15 @@ public class TemplateWorkflowUtil {
 	}
 
 	public static boolean itIsAClonedJob(Job job) {
-
+		
 		TemplateWorkflowProperty jobProperty = TemplateWorkflowUtil.getTemplateWorkflowProperty(job);
 		if( jobProperty != null && jobProperty.isWorkflowCreatedJob() ){
 			return true;
 		}
 
-		return false;
+		return false;		
+		
+		
 	}
 
 	private static boolean createOrUpdate(
@@ -478,6 +484,9 @@ public class TemplateWorkflowUtil {
 		}
 		
 		String jobXml = FileUtils.readFileToString(templateJob.getConfigFile().getFile());
+		
+		// Fix to avoid event loop
+		jobXml = jobXml.replace("<isWorkflowCreatedJob>false</isWorkflowCreatedJob>", "<isWorkflowCreatedJob>true</isWorkflowCreatedJob>");
 		
 		for (String origJob : clonedJobGroup.keySet()) {
 			jobXml = jobXml.replaceAll(">\\s*" + origJob + "\\s*</", ">" + clonedJobGroup.get(origJob) + "</");

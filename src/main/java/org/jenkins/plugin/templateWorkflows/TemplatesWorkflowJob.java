@@ -4,7 +4,7 @@ import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.deleteJo
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.deleteJobProperty;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.getJobStatus;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.isWorkflowNameBeenUsed;
-import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.mekeWorkflowJobsConsistent;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.makeWorkflowJobsConsistent;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.notUsesJobName;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.validateJobStatus;
 import hudson.Extension;
@@ -139,7 +139,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 			if(!getErrorMap().isEmpty()){
 				forwardBack(req, rsp);
 				return;
-			}			
+			}
 			
 			selectedInstance.setInstanceName(templateInstanceName);
 			selectedInstance.setTemplateName(templateName);
@@ -193,7 +193,7 @@ public class TemplatesWorkflowJob extends ViewJob<TemplatesWorkflowJob, Template
 
 			getSafeTemplateInstances().getInstances().put(selectedInstance.getInstanceName(), selectedInstance);
 
-			mekeWorkflowJobsConsistent();
+			makeWorkflowJobsConsistent();
 
 			finishAndRedirect(req, rsp);
 			return;

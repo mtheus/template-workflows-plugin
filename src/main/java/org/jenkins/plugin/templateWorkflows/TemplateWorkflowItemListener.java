@@ -4,7 +4,7 @@ import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.fillJobR
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.findTemplateWorkflowInstanceRelatedWtihTemplateName;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.getTemplateWorkflowProperty;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.itIsATemplateJob;
-import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.mekeWorkflowJobsConsistent;
+import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.makeWorkflowJobsConsistent;
 import static org.jenkins.plugin.templateWorkflows.TemplateWorkflowUtil.updateTemplateWorkflowInstance;
 import hudson.Extension;
 import hudson.model.Item;
@@ -13,6 +13,7 @@ import hudson.model.listeners.ItemListener;
 
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import com.google.common.base.Throwables;
 
@@ -23,6 +24,8 @@ import com.google.common.base.Throwables;
 @SuppressWarnings("rawtypes")
 public class TemplateWorkflowItemListener extends ItemListener {
 
+	private static final Logger LOGGER = Logger.getLogger(TemplateWorkflowUtil.class.getName());
+	
 	@Override
 	public void onCreated(Item item) {
 		updateTemplateInstanceMetadata(item);
@@ -45,22 +48,19 @@ public class TemplateWorkflowItemListener extends ItemListener {
 
 	private void updateTemplateInstanceMetadata(Item item) {
 		
-		try {
-			// Sorry for that =[
-			Thread.sleep(30);			
-		} catch (InterruptedException e) {
-		}
-		
 		Job job = getProject(item);
 		if(job == null){
 			return;
 		}
 
 		if (itIsATemplateJob(job)){
+			
+			LOGGER.info(String.format( "Processing job template %s", job.getName() ));
 
 			TemplateWorkflowProperty templateWorkflowProperty = getTemplateWorkflowProperty(job);
 			List<TemplateWorkflowInstance> instances = findTemplateWorkflowInstanceRelatedWtihTemplateName(templateWorkflowProperty.getTemplateName());
 			for (TemplateWorkflowInstance templateWorkflowInstance : instances) {
+				LOGGER.info(String.format( "Processing job template %s - templateWorkflowInstance: %s", job.getName(), templateWorkflowInstance.getInstanceName() ));
 				Map<String, String> jobRealation = fillJobRelation(templateWorkflowInstance);
 				templateWorkflowInstance.setRelatedJobs(jobRealation);
 			}
@@ -76,7 +76,7 @@ public class TemplateWorkflowItemListener extends ItemListener {
 			throw Throwables.propagate(e);
 		}
 		try {
-			mekeWorkflowJobsConsistent();
+			makeWorkflowJobsConsistent();
 		} catch (Exception e) {
 			//TODO: check if this is right way
 			throw Throwables.propagate(e);
